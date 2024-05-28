@@ -1,0 +1,38 @@
+root_dir: "C:\\Users\\david\\Desktop\\ViTSSM"
+
+experiment:
+  wandb:
+    project: "ViTSSM"
+    group: ""
+    name: ""
+
+  log_freq: 25
+  checkpoint_path: "C:\\Users\\david\\Desktop\\masters_thesis\\checkpoints"
+
+dataset:
+  root: "data"
+  name: "moving_mnist"
+  mode: "train"
+  resolution: 64
+  train_percentage: 0.90
+  num_workers: 16
+  pin_memory: True
+
+optimization:
+  loss:
+    name: "MSELoss"
+    args: {}
+  optimizer:
+    name: "AdamW"
+    args: {lr: 0.001,
+           weight_decay: 0.01}
+  scheduler:
+    name: "StepLR"
+    args: {step_size: 1,
+           gamma: 0.5}
+  epochs: 10
+  batch_size: 256
+  val_batch_size: 1024
+
+model:
+  device: "cuda"
