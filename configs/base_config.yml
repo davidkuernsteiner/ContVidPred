@@ -11,7 +11,7 @@ experiment:
 
 dataset:
   root: "data"
-  name: "moving_mnist"
+  name: "ucf101"
   mode: "train"
   resolution: 64
   train_percentage: 0.90
