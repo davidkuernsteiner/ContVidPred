@@ -26,7 +26,8 @@ def build_dataset(
         config: Dict
 ) -> VisionDataset:
     """Builds dataset given config."""
-    data_root = Path(config.root_dir, config.dataset.get("root", "data"))
+    data_root = Path(config.root_dir) / config.dataset.get("root", "data")
+    print(data_root)
 
     match config.dataset.name:
         case "moving_mnist":

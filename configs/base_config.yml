@@ -1,13 +1,13 @@
-root_dir: "C:\\Users\\david\\Desktop\\ViTSSM"
+root_dir: "/mnt/c/Users/david/Desktop/ViTSSM"
 
 experiment:
   wandb:
     project: "ViTSSM"
-    group: ""
-    name: ""
+    group: "a"
+    name: "b"
 
   log_freq: 25
-  checkpoint_path: "C:\\Users\\david\\Desktop\\masters_thesis\\checkpoints"
+  checkpoint_path: "//mnt/c/Users/david/Desktop/masters_thesis/checkpoints"
 
 dataset:
   root: "data"
