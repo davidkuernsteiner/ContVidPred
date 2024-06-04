@@ -7,12 +7,13 @@ channels:
 
 dependencies:
 - python=3.12
-- ffmpeg
 - matplotlib
 - pandas
+- jupyter
 - #install pytorch and torchvision manually to make cuda work
 
 - pip:
+    -av
     - wandb
     - addict
     - kappaconfig

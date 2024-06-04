@@ -14,7 +14,6 @@ def build_transforms(
     """Builds image transformations."""
     transform = Compose([
         Resize(config.dataset.resolution),
-        ToImage(),
         ToDtype(torch.float32, scale=True),
         Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -26,38 +25,46 @@ def build_dataset(
         config: Dict
 ) -> VisionDataset:
     """Builds dataset given config."""
-    data_root = Path(config.root_dir) / config.dataset.get("root", "data")
-    print(data_root)
+    data_root = Path(config.root_dir, config.dataset.get("root", "data"))
 
     match config.dataset.name:
         case "moving_mnist":
-            return MovingMNIST(root=data_root,
-                               split=config.dataset.get("mode", "train"),
-                               download=True,
-                               transform=build_transforms(config)
-                               )
+            return MovingMNIST(
+                root=data_root,
+                split=config.dataset.get("mode", "train"),
+                download=True,
+                transform=build_transforms(config)
+            )
 
         case "kinetics":
-            return Kinetics(root=data_root / "kinetics",
-                            split=config.dataset.get("mode", "train"),
-                            download=True,
-                            transform=build_transforms(config),
-                            )
+            return Kinetics(
+                root=data_root / "kinetics",
+                split=config.dataset.get("mode", "train"),
+                download=True,
+                transform=build_transforms(config),
+                output_format="TCHW",
+            )
 
         case "ucf101":
-            return UCF101(root=data_root / "UCF-101",
-                          annotation_path= data_root / "splits" / "ucfTrainTestlist",
-                          frames_per_clip=config.dataset.get("frames_per_clip", 16),
-                          train=config.dataset.get("mode", "train") == "train",
-                          transform=build_transforms(config),
-                          )
+            return UCF101(
+                root=data_root / "UCF-101",
+                annotation_path= data_root / "splits" / "ucfTrainTestlist",
+                frames_per_clip=config.dataset.get("frames_per_clip", 16),
+                step_between_clips=config.dataset.get("step_between_clips", 1),
+                train=config.dataset.get("mode", "train") == "train",
+                transform=build_transforms(config),
+                output_format="TCHW",
+            )
 
         case "hmdb51":
-            return HMDB51(root=data_root / "HMDB51",
-                          annotation_path= data_root / "splits" / "testTrainMulti_7030_splits",
-                          train=config.dataset.get("mode", "train") == "train",
-                          transform=build_transforms(config),
-                          )
+            return HMDB51(
+                root=data_root / "HMDB51",
+                annotation_path= data_root / "splits" / "testTrainMulti_7030_splits",
+                frames_per_clip=config.dataset.get("frames_per_clip", 16),
+                train=config.dataset.get("mode", "train") == "train",
+                transform=build_transforms(config),
+                output_format="TCHW",
+            )
 
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")
