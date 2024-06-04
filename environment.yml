@@ -16,4 +16,5 @@ dependencies:
     - wandb
     - addict
     - kappaconfig
+    - ruff
 
