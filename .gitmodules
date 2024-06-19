@@ -1,0 +1,6 @@
+[submodule "ext/VideoMamba"]
+	path = ext/VideoMamba
+	url = https://github.com/OpenGVLab/VideoMamba.git
+[submodule "ext/latent-diffusion"]
+	path = ext/latent-diffusion
+	url = https://github.com/CompVis/latent-diffusion.git
