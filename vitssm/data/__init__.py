@@ -75,11 +75,13 @@ def build_dataloaders(
 ) -> Union[DataLoader, Tuple[DataLoader, DataLoader]]:
     """Builds dataloaders for training and validation."""
     dataset = build_dataset(config)
+
     if config.dataset.mode == "train":
-        train_set, val_set = random_split(dataset,
-                                          [config.dataset.train_percentage,
-                                           1 - config.dataset.train_percentage]
-                                          )
+        train_set, val_set = random_split(
+            dataset,
+            [config.dataset.train_percentage, 1 - config.dataset.train_percentage]
+        )
+
         train_loader = DataLoader(train_set,
                                   batch_size=config.optimization.batch_size,
                                   shuffle=True,
@@ -87,12 +89,15 @@ def build_dataloaders(
                                   pin_memory=config.dataset.get("pin_memory", False)
                                   )
         val_loader = DataLoader(val_set,
-                                batch_size=config.optimization.get("val_batch_size",
-                                                                   config.optimization.batch_size),
+                                batch_size=config.optimization.get(
+                                    "val_batch_size",
+                                    config.optimization.batch_size
+                                ),
                                 shuffle=False,
                                 num_workers=config.dataset.get("num_workers", 1),
                                 pin_memory=config.dataset.get("pin_memory", False)
                                 )
+
         return train_loader, val_loader
 
     else:

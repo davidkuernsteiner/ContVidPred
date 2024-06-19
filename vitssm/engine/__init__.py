@@ -5,7 +5,6 @@ import wandb
 from addict import Dict
 from torch import nn
 
-from .next_frame_prediction import NextFrameEngine
 from ..utils import set_seeds
 
 wandb.login()
@@ -45,6 +44,10 @@ class ModelEngine(ABC):
     def _save_checkpoint(self) -> None:
         pass
 
+    @abstractmethod
+    def _early_stopping_check(self) -> bool:
+        pass
+
 
 def build_loss(
         config: Dict,
@@ -60,7 +63,7 @@ def build_optimizer(
     """Builds optimizer."""
     optimizer = getattr(torch.optim, config.optimization.optimizer.name)(
         model.parameters(),
-        **config.optimization.optimizer.args
+        **config.optimization.optimizer.kwargs
     )
     return optimizer
 
@@ -71,9 +74,9 @@ def build_scheduler(
 ) -> torch.optim.lr_scheduler.LRScheduler:
     """Builds learning rate scheduler."""
     if config.optimization.scheduler.name == "LambdaLR":
-        warmup_steps = config.optimization.scheduler.args.get("warmup_steps", 10000)
-        decay_steps = config.optimization.scheduler.args.get("decay_steps", 100000)
-        scheduler_gamma = config.optimization.scheduler.args.get("gamma", 0.5)
+        warmup_steps = config.optimization.scheduler.kwargs.get("warmup_steps", 10000)
+        decay_steps = config.optimization.scheduler.kwargs.get("decay_steps", 100000)
+        scheduler_gamma = config.optimization.scheduler.kwargs.get("gamma", 0.5)
 
         def warm_and_decay_lr_scheduler(step: int):
             if step < warmup_steps:
@@ -89,6 +92,6 @@ def build_scheduler(
 
     _scheduler = getattr(torch.optim.lr_scheduler, config.optimization.scheduler.name)(
         optimizer,
-        **config.optimization.scheduler.args
+        **config.optimization.scheduler.kwargs
     )
     return _scheduler

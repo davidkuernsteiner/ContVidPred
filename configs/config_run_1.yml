@@ -1,0 +1,6 @@
+experiment:
+  wandb:
+    group: "mamba"
+    name: "run_1"
+  log_freq: 50
+  checkpoint_path: "checkpoints"

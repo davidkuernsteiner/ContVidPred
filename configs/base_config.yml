@@ -3,8 +3,8 @@ root_dir: "/mnt/c/Users/david/Documents/Uni/vitssm"
 experiment:
   wandb:
     project: "ViTSSM"
-    group: "a"
-    name: "b"
+    #group:
+    #name:
 
   log_freq: 25
   checkpoint_path: "checkpoints"
@@ -26,12 +26,12 @@ optimization:
     args: {}
   optimizer:
     name: "AdamW"
-    args: {lr: 0.001,
-           weight_decay: 0.01}
+    kwargs: {lr: 0.001,
+             weight_decay: 0.01}
   scheduler:
     name: "StepLR"
-    args: {step_size: 1,
-           gamma: 0.5}
+    kwargs: {step_size: 1,
+             gamma: 0.5}
   epochs: 10
   batch_size: 256
   val_batch_size: 1024
