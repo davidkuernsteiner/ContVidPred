@@ -2,28 +2,34 @@ from abc import ABC, abstractmethod
 
 import torch
 import wandb
-from addict import Dict
+from omegaconf.dictconfig import DictConfig
 from torch import nn
 
 from ..utils import set_seeds
+from ..utils.metrics import build_metric_container
 
 wandb.login()
 
 
 class ModelEngine(ABC):
 
-    def __init__(self, model: nn.Module, config: Dict):
+    def __init__(self, model: nn.Module, config: DictConfig) -> None:
         self.config = config
         self.seed = config.experiment.get("seed", 42)
         self.device = torch.device(config.model.get("device", "cpu"))
+
         self.model = model.to(self.device)
         self.optimizer = build_optimizer(model, config)
         if config.optimization.get("scheduler", None) is not None:
             self.scheduler = build_scheduler(self.optimizer, config)
             self.scheduler_step_on_batch = config.optimization.scheduler.get("step_on_batch", False)
+
         else:
             self.scheduler = None
             self.scheduler_step_on_batch = False
+
+        self.criterion = build_loss(config)
+        self.metrics = build_metric_container(config)
 
         self.run = None
         set_seeds(self.seed)
@@ -50,7 +56,7 @@ class ModelEngine(ABC):
 
 
 def build_loss(
-        config: Dict,
+        config: DictConfig,
 ) -> torch.nn.Module:
     """Builds loss function."""
     loss = getattr(torch.nn, config.optimization.loss.name)(**config.optimization.loss.args)
@@ -58,7 +64,7 @@ def build_loss(
 
 
 def build_optimizer(
-        model, config: Dict,
+        model, config: DictConfig,
 ) -> torch.optim.Optimizer:
     """Builds optimizer."""
     optimizer = getattr(torch.optim, config.optimization.optimizer.name)(
@@ -70,7 +76,7 @@ def build_optimizer(
 
 def build_scheduler(
         optimizer,
-        config: Dict
+        config: DictConfig
 ) -> torch.optim.lr_scheduler.LRScheduler:
     """Builds learning rate scheduler."""
     if config.optimization.scheduler.name == "LambdaLR":
