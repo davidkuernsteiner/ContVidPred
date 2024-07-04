@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from pandas import Series
 from torch import nn
+from torch import Tensor
 from omegaconf.dictconfig import DictConfig
 import wandb
 from datetime import datetime
@@ -57,7 +58,6 @@ class ActionRecognitionEngine(ModelEngine):
             self.model.eval()
             for x, y in eval_loader:
                 batch_eval_metrics, preds = self._eval_step(x, y)
-                eval_metrics += batch_eval_metrics
                 x = x
                 y = y
 
@@ -71,37 +71,29 @@ class ActionRecognitionEngine(ModelEngine):
 
         self.run.finish()
 
-    def _train_step(self, _x, _y) -> Tuple[float, Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]]:
-        _x, _y = _x.to(self.device), _y.to(self.device)
-
-        _pred = self.model(_x)
-
-        _loss = self.criterion(_pred, _x)
+    def _train_step(self, _x, _y) -> Tuple[float, Tensor]:
+        with torch.autocast(device_type=self.device, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.model(_x)
+            _loss = self.criterion(_pred, _x)
+        self.scaler.scale(_loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
         self.optimizer.zero_grad()
-        _loss.backward()
-        self.optimizer.step()
+
         if (self.scheduler is not None) and self.scheduler_step_on_batch:
             self.scheduler.step()
 
         return _loss.item(), _pred
 
     @torch.no_grad()
-    def _eval_step(self, _x, _y) -> Tuple[Series, Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]]:
-        _x, _y = _x.to(self.device), _y.to(self.device)
+    def _eval_step(self, _x, _y) -> Tuple[float, Tensor]:
+        with torch.autocast(device_type=self.device, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.model(_x)
+            _loss = self.criterion(_pred, _y)
 
-        _pred = self.model(_x)
+        self.metrics.update(_pred, _y)
 
-        _loss = self.criterion(_recon_combined, _x)
-        _batch_fg_ari, _batch_ari = preprocess_and_batch_aris(_y, _soft_pred_masks)
-
-        _metrics = Series({
-            "eval_loss": _loss.item(),
-            "eval_ari_fg": _batch_fg_ari.mean().item(),
-            "eval_ari": _batch_ari.mean().item()
-            }
-        )
-
-        return _metrics, (_recon_combined, _recons, _soft_pred_masks, _slots)
+        return _loss.item(), _pred
 
     @staticmethod
     def _log_train(epoch: int, step: int, train_metrics: dict) -> None:
@@ -112,9 +104,19 @@ class ActionRecognitionEngine(ModelEngine):
         wandb.log({"eval": eval_metrics, "epoch": epoch}, step=step)
 
     def _save_checkpoint(self) -> None:
-        save_dir = os.path.join(self.config.experiment.get("checkpoint_path", "checkpoints"),
-                                 self.run.project,
-                                 self.run.group
-                                )
+        save_dir = os.path.join(
+            self.config.experiment.get("checkpoint_path", "checkpoints"),
+            self.run.project,
+            self.run.group,
+        )
         os.makedirs(save_dir, exist_ok=True)
-        torch.save(self.model.state_dict(), os.path.join(save_dir, self.run.name + ".pth"))
+
+        checkpoint = {
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "scaler": self.scaler.state_dict(),
+            "scheduler": self.scheduler.state_dict() if self.scheduler is not None else None,
+        }
+        torch.save(checkpoint, os.path.join(save_dir, self.run.name + ".pth"))
+
+    def _

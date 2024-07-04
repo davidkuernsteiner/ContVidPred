@@ -1,24 +1,29 @@
 from torchmetrics import Metric
 import torchmetrics
 from omegaconf.dictconfig import DictConfig
+from torch import Tensor
 
 
 
 class MetricContainer:
-    def __init__(self, metrics: list[Metric]) -> None:
+    def __init__(self, metrics: dict[str, Metric]) -> None:
         self.metrics = metrics
 
-    def __call__(self, *args, **kwargs) -> dict:
-        return {metric.name: metric(*args, **kwargs) for metric in self.metrics}
+    def __call__(self, pred: Tensor, target: Tensor) -> dict:
+        return {name: metric(pred, target) for name, metric in self.metrics.items()}
 
-    def update(self, *args, **kwargs) -> None:
-        for metric in self.metrics:
-            metric.update(*args, **kwargs)
+    def update(self, pred: Tensor, target: Tensor) -> None:
+        for metric in self.metrics.values():
+            metric.update(pred, target)
 
     def compute(self) -> dict:
-        return {metric.name: metric.compute() for metric in self.metrics}
+        return {name: metric.compute() for name, metric in self.metrics.items()}
+
+    def reset(self) -> None:
+        for metric in self.metrics.values():
+            metric.reset()
 
 
 def build_metric_container(config: DictConfig) -> MetricContainer:
-    metrics = [getattr(torchmetrics, metric.name)(**metric.kwargs) for metric in config.metrics]
+    metrics = {name: getattr(torchmetrics, metric.name)(**metric.kwargs) for name, metric in config.metrics.items()}
     return MetricContainer(metrics)

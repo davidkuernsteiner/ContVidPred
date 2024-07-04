@@ -4,3 +4,21 @@ experiment:
     name: "run_1"
   log_freq: 50
   checkpoint_path: "checkpoints"
+
+metrics:
+  top1_accuracy:
+    name: "Accuracy"
+    kwargs: {
+      task: "multiclass",
+      num_classes: 100,
+      top_k: 1
+    }
+
+  top5_accuracy:
+    name: "Accuracy"
+    kwargs: {
+      task: "multiclass",
+      num_classes: 100,
+      top_k: 5,
+    }
+

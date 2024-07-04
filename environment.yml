@@ -16,7 +16,6 @@ dependencies:
 - pip:
     -av
     - wandb
-    - addict
     - omegaconf
     - ruff
 

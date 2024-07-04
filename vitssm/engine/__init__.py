@@ -17,9 +17,11 @@ class ModelEngine(ABC):
         self.config = config
         self.seed = config.experiment.get("seed", 42)
         self.device = torch.device(config.model.get("device", "cpu"))
+        self.use_amp = config.model.get("use_amp", False)
 
         self.model = model.to(self.device)
         self.optimizer = build_optimizer(model, config)
+        self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
         if config.optimization.get("scheduler", None) is not None:
             self.scheduler = build_scheduler(self.optimizer, config)
             self.scheduler_step_on_batch = config.optimization.scheduler.get("step_on_batch", False)
@@ -48,6 +50,10 @@ class ModelEngine(ABC):
 
     @abstractmethod
     def _save_checkpoint(self) -> None:
+        pass
+
+    @abstractmethod
+    def _resume_checkpoint(self) -> None:
         pass
 
     @abstractmethod
