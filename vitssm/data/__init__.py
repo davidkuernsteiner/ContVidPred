@@ -7,9 +7,10 @@ from addict import Dict
 from torch.utils.data import DataLoader, random_split
 from torchvision.transforms.v2 import Compose, Resize, ToImage, ToDtype, Normalize
 from torchvision.datasets import VisionDataset, MovingMNIST, Kinetics, UCF101, HMDB51
+from omegaconf import DictConfig
 
 def build_transforms(
-        config: Dict,
+        config: DictConfig,
 ) -> Compose:
     """Builds image transformations."""
     transform = Compose([
@@ -22,7 +23,7 @@ def build_transforms(
 
 
 def build_dataset(
-        config: Dict
+        config: DictConfig
 ) -> VisionDataset:
     """Builds dataset given config."""
     data_root = Path(config.root_dir, config.dataset.get("root", "data"))
@@ -71,7 +72,7 @@ def build_dataset(
 
 
 def build_dataloaders(
-        config: Dict,
+        config: DictConfig,
 ) -> Union[DataLoader, Tuple[DataLoader, DataLoader]]:
     """Builds dataloaders for training and validation."""
     dataset = build_dataset(config)

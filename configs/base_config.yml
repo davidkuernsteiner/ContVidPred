@@ -3,8 +3,8 @@ root_dir: "/mnt/c/Users/david/Documents/Uni/vitssm"
 experiment:
   wandb:
     project: "ViTSSM"
-    #group:
-    #name:
+    #group: "ViT"
+    #name: "ucf101"
 
   log_freq: 25
   checkpoint_path: "checkpoints"
