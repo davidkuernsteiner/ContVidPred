@@ -1,12 +1,12 @@
-from typing import Union, Tuple, Any
-import os
 from pathlib import Path
+from typing import Union, Tuple
 
 import torch
-from torch.utils.data import DataLoader, random_split
-from torchvision.transforms.v2 import Compose, Resize, ToImage, ToDtype, Normalize
-from torchvision.datasets import VisionDataset, MovingMNIST, Kinetics, UCF101, HMDB51
 from omegaconf import DictConfig
+from torch.utils.data import DataLoader, random_split
+from torchvision.datasets import VisionDataset, MovingMNIST, Kinetics, UCF101, HMDB51
+from torchvision.transforms.v2 import Compose, Resize, ToDtype, Normalize
+
 
 def build_transforms(
         config: DictConfig,

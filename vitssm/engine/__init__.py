@@ -1,5 +1,5 @@
+import gc
 import os
-from abc import ABC, abstractmethod
 from datetime import datetime
 
 import torch
@@ -7,12 +7,10 @@ import wandb
 from omegaconf.dictconfig import DictConfig
 from torch import nn
 from tqdm import tqdm
-import gc
-from torchmetrics import MetricCollection
 
+from ..data import build_dataloaders
 from ..utils import set_seeds
 from ..utils.metrics import build_metric_container
-from ..data import build_dataloaders
 
 wandb.login()
 

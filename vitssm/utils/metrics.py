@@ -1,7 +1,5 @@
-from torchmetrics import Metric
 import torchmetrics
 from omegaconf.dictconfig import DictConfig
-from torch import Tensor
 from torchmetrics import MetricCollection
 
 
