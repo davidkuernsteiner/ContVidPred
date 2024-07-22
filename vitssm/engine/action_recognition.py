@@ -1,19 +1,11 @@
-import os
 from typing import Tuple
 
-import numpy as np
 import torch
-from pandas import Series
-from torch import nn
-from torch import Tensor
 from omegaconf.dictconfig import DictConfig
-import wandb
-from datetime import datetime
+from torch import Tensor
+from torch import nn
 
-from tqdm import tqdm
-import gc
-
-from . import ModelEngine, build_loss
+from . import ModelEngine
 
 
 class ActionRecognitionEngine(ModelEngine):

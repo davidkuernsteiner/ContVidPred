@@ -2,19 +2,17 @@ name: vitssm
 
 channels:
 - conda-forge
-- nvidia
-- pytorch
+- defaults
 
 dependencies:
 - python=3.12
 - matplotlib
 - pandas
 - jupyter
-- torchmetrics
-- #install pytorch and torchvision manually to make cuda work
+- av
+- tqdm
 
 - pip:
-    -av
     - wandb
     - omegaconf
     - ruff

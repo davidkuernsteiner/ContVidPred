@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 
 import torch
-from addict import Dict
 from torch.utils.data import DataLoader, random_split
 from torchvision.transforms.v2 import Compose, Resize, ToImage, ToDtype, Normalize
 from torchvision.datasets import VisionDataset, MovingMNIST, Kinetics, UCF101, HMDB51
