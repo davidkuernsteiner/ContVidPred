@@ -1,4 +1,4 @@
-root_dir: "/mnt/c/Users/david/Documents/Uni/vitssm"
+root_dir: "./"
 
 experiment:
   wandb:
@@ -17,7 +17,7 @@ dataset:
   step_between_clips: 150
   resolution: 64
   train_percentage: 0.90
-  num_workers: 16
+  num_workers: 12
   pin_memory: True
 
 optimization:

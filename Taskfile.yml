@@ -1,0 +1,13 @@
+version: "3"
+
+tasks:
+  launch_run:
+    cmds:
+      - wandb launch \\
+        --uri https://github.com/davidkuernsteiner/ViTSSM.git \\
+        --job-name hello-world-git \\
+        --project ViTSSM \\
+        --build-context jobs/hello_world \\
+        --dockerfile Dockerfile.wandb \\
+        --entry-point "lanuch_run.py"
+    silent: true
