@@ -30,6 +30,7 @@ def launch_job(config):
     train_loader, eval_loader = build_dataloaders(config)
     engine = ActionRecognitionEngine(model, config)
     engine.train(train_loader, eval_loader)
+    engine.run.finish()
 
 
 def main():

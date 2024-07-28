@@ -90,8 +90,6 @@ class ModelEngine:
             self._save_checkpoint()
             gc.collect()
 
-        self.run.finish()
-
     def eval(self) -> None:
         pass
 

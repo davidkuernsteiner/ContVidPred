@@ -19,6 +19,3 @@ RUN micromamba run -n base pip install --default-timeout=1000 torch torchvision 
 ENV MAMBA_DOCKERFILE_ACTIVATE=1
 
 COPY --link vitssm/ data/ configs/  ./
-
-SHELL ["micromamba", "run", "-n", "base", "/bin/bash", "-c"]
-SHELL ["python", "vitssm/execute_job.py", "-bc configs/base_config.yml", "-rc configs/config_run_1.yml"]
