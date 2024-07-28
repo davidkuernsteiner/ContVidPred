@@ -12,5 +12,4 @@ RUN micromamba run -n base pip install --default-timeout=1000 torch torchvision 
 
 COPY --link vitssm/ ./vitssm
 COPY --link run_configs/ ./run_configs
-COPY --link /mnt/c/Users/david/Documents/Uni/vitssm/data ./data
 
