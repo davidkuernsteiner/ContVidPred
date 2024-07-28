@@ -3,9 +3,9 @@ import json
 from omegaconf import OmegaConf, DictConfig
 from pathlib import Path
 from typing import Union, Tuple
-from models import build_model
-from engine.tasks import ActionRecognitionEngine
-from .data import build_dataloaders
+from vitssm.models import build_model
+from vitssm.engine.tasks import ActionRecognitionEngine
+from vitssm.data import build_dataloaders
 
 
 def load_config(file_path):
