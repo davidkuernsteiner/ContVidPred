@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import VisionDataset, MovingMNIST, Kinetics, UCF101, HMDB51
 from torchvision.transforms.v2 import Compose, Resize, ToDtype, Normalize
 
+from .datasets import VideoMDSpritesDataset, NextFrameDataset
+
 
 def build_transforms(
         config: DictConfig,
@@ -23,17 +25,19 @@ def build_transforms(
 
 def build_dataset(
         config: DictConfig
-) -> VisionDataset:
+) -> Union[VisionDataset, NextFrameDataset]:
     """Builds dataset given config."""
     data_root = Path(config.root_dir, config.dataset.get("root", "data"))
 
     match config.dataset.name:
         case "moving_mnist":
-            return MovingMNIST(
-                root=data_root,
-                split=config.dataset.get("mode", "train"),
-                download=True,
-                transform=build_transforms(config)
+            return NextFrameDataset(
+                MovingMNIST(
+                    root=data_root,
+                    split=config.dataset.get("mode", "train"),
+                    download=True,
+                    transform=build_transforms(config),
+                ),
             )
 
         case "kinetics":
@@ -65,6 +69,9 @@ def build_dataset(
                 transform=build_transforms(config),
                 output_format="TCHW",
             )
+
+        case "vmdsprites":
+            pass
 
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")

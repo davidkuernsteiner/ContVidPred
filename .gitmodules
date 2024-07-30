@@ -6,4 +6,4 @@
 	url = https://github.com/CompVis/latent-diffusion.git
 [submodule "ext/jku-ocl"]
 	path = ext/jku-ocl
-	url = https://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@github.com/radlera/jku-ocl.git
+	url = https://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@github.com/radlera/jku-ocl.git

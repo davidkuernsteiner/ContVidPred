@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from ..data import build_dataloaders
 from ..utils import set_seeds
-from ..utils.metrics import build_metric_container
+from ..utils.metrics import build_metric_collection
 
 wandb.login()
 
@@ -37,7 +37,7 @@ class ModelEngine:
             self.scheduler_step_on_batch = False
 
         self.criterion = build_loss(config)
-        self.metrics = build_metric_container(config)
+        self.metrics = build_metric_collection(config)
 
         self.train_loader, self.eval_loader = build_dataloaders(config)
 
