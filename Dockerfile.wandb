@@ -13,3 +13,5 @@ RUN micromamba run -n base pip install --default-timeout=1000 torch torchvision 
 COPY --link vitssm/ ./vitssm
 COPY --link run_configs/ ./run_configs
 
+ENTRYPOINT ["python", "execute_job.py"]
+
