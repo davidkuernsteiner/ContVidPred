@@ -1,13 +1,69 @@
 version: "3"
 
+env:
+    CONDA: micromamba
+
+vars:
+    PROJECT: ViTSSM
+    LIBRARY: vitssm
+
 tasks:
-  launch_run:
-    cmds:
-      - wandb launch \\
-        --uri https://github.com/davidkuernsteiner/ViTSSM.git \\
-        --job-name hello-world-git \\
-        --project ViTSSM \\
-        --build-context jobs/hello_world \\
-        --dockerfile Dockerfile.wandb \\
-        --entry-point "lanuch_run.py"
-    silent: true
+    print-os:
+        cmds:
+            - echo {{OS}}
+
+    env-create:
+        cmds:
+            - $CONDA env create -n {{.PROJECT}} --file env.yml --yes
+            - $CONDA env export -n {{.PROJECT}} > env.{{OS}}.lock.yml
+
+    env-install:
+        cmd: $CONDA env create -n {{.PROJECT}} --file env.{{OS}}.lock.yml --yes
+
+    env-remove:
+        cmd: $CONDA env remove -n {{.PROJECT}} --yes
+
+    pre-commit-install:
+        cmd: pre-commit install
+
+    pre-commit:
+        cmd: pre-commit run --all-files
+
+    format:
+        cmds:
+            - for: { var: LIBRARY }
+              cmd: ruff check {{.ITEM}} --fix && black --config pyproject.toml {{.ITEM}}
+
+    lint:
+        cmds:
+            - for: { var: LIBRARY }
+              cmd: ruff check {{.ITEM}} && black --diff --check --config pyproject.toml {{.ITEM}}
+
+    typing:
+        cmd: pyright anomaly-next-dagster
+
+    check:
+        cmds:
+            - task: lint
+            - task: typing
+
+
+    dagster-dev-tmp:
+        cmd: dotenv run dagster dev -m anomaly-next-dagster --working-directory anomaly-next-dagster
+
+    dagster-build:
+        cmd: dotenv run docker compose -f ./docker-compose.yml build
+
+    dagster-run:
+        cmd: dotenv run docker compose -f ./docker-compose.yml run --rm --entrypoint "/bin/bash" dagster
+
+    dagster-push:
+        cmd: dotenv run docker compose -f ./docker-compose.yml push
+
+    dagster-up:
+        cmd: dotenv run docker compose -f ./docker-compose.yml up
+
+    dagster-build-and-push:
+        cmds:
+            - task: dagster-build
+            - task: dagster-push

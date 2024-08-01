@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+    job:
+        entrypoint: ["python", "execute_job.py"]
+        build:
+            context: '.'
+            dockerfile: Dockerfile
+        image: "${AZURE_CONTAINER_REGISTRY}.azurecr.io/$ANOMALYNEXT_DAGSTER_MODE/${AZURE_CONTAINER_IMAGE}:v0.20"
+        env_file: .env
+        ports:
+            - "3000:3000"
+        volumes:
+            -   type: volume
+                source: anomalynext_data
+                target: $ANOMALYNEXT_NAS_MOUNT_PATH
+
+volumes:
+    anomalynext_data:
+        driver_opts:
+            type: "cifs"
+            o: "addr=${ANOMALYNEXT_NAS_STORAGE_ADDRESS},domain=muc,username=${NAS_STORAGE_USER},password=${NAS_STORAGE_PASSWORD}"
+            device: "//:/${ANOMALYNEXT_NAS_STORAGE_PREFIX}"
