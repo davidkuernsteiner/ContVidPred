@@ -44,7 +44,7 @@ class ModelEngine:
         self.run = None
         self.state = {"step": 0, "epoch": 0}
 
-    def train(self, train_loader, eval_loader):
+    def train(self) -> None:
         self.run = wandb.init(
             config=dict(self.config),
             project=self.config.experiment.wandb.project,
@@ -64,7 +64,7 @@ class ModelEngine:
             self.state["epoch"] += 1
 
             self.model.train()
-            for x, y in tqdm(train_loader, total=len(train_loader), desc=f"Epoch {self.state["epoch"]}"):
+            for x, y in tqdm(self.train_loader, total=len(self.train_loader), desc=f"Epoch {self.state["epoch"]}"):
                 loss, _ = self._train_step(x, y)
                 self.state["step"] += 1
 
@@ -79,7 +79,7 @@ class ModelEngine:
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
 
             self.model.eval()
-            for x, y in eval_loader:
+            for x, y in self.eval_loader:
                 batch_eval_metrics, preds = self._eval_step(x, y)
 
             self._log_eval(self.state["epoch"], self.state["step"], self.metrics.compute())

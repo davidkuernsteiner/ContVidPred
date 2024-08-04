@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Union
 from vitssm.models import build_model
 from vitssm.engine.tasks import ActionRecognitionEngine
-from vitssm.data import build_dataloaders
 
 
 def load_config(file_path):
@@ -27,9 +26,8 @@ def get_configs(
 
 def launch_job(config):
     model = build_model(config)
-    train_loader, eval_loader = build_dataloaders(config)
     engine = ActionRecognitionEngine(model, config)
-    engine.train(train_loader, eval_loader)
+    engine.train()
     engine.run.finish()
 
 
