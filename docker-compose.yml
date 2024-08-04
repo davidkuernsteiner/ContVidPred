@@ -5,7 +5,7 @@ services:
         entrypoint: ["python", "execute_job.py"]
         build:
             context: '.'
-            dockerfile: Dockerfile
+            dockerfile: Dockerfile.wandb
         image: "${AZURE_CONTAINER_REGISTRY}.azurecr.io/$ANOMALYNEXT_DAGSTER_MODE/${AZURE_CONTAINER_IMAGE}:v0.20"
         env_file: .env
         ports:
