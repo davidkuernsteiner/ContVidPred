@@ -3,11 +3,11 @@ from torch import nn
 from torch.nn import Module
 from torch.optim import Optimizer
 from torch.cuda.amp import GradScaler
-from torchvision.models.video import swin3d_t
+from torchvision.models.video import mvit_v2_s
 
 def build_model(
         config: DictConfig
 ) -> Module:
     """Builds model given config."""
-    model = swin3d_t()
+    model = mvit_v2_s()
     return model

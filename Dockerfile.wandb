@@ -9,6 +9,7 @@ WORKDIR /home/$MAMBA_USER
 COPY env.linux.lock.yml  .
 
 RUN micromamba install -n base --file env.linux.lock.yml --yes
+RUN pip install --pre -U xformers
 
 COPY --chown=$MAMBA_USER vitssm ./vitssm
 COPY --chown=$MAMBA_USER run_configs ./run_configs
