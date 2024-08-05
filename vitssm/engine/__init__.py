@@ -55,7 +55,8 @@ class ModelEngine:
         )
         wandb.watch(
             self.model,
-            self.criterion, log="all",
+            self.criterion,
+            log="all",
             log_freq=self.config.experiment.get("log_freq", 0),
         )
 
@@ -97,7 +98,7 @@ class ModelEngine:
         self.run = wandb.init(
             config=dict(self.config),
             project=self.config.experiment.wandb.project,
-            id = self.config.experiment.wandb.id,
+            id=self.config.experiment.wandb.id,
             resume="must",
         )
 
@@ -154,9 +155,8 @@ class ModelEngine:
         raise NotImplementedError
 
 
-
 def build_loss(
-        config: DictConfig,
+    config: DictConfig,
 ) -> torch.nn.Module:
     """Builds loss function."""
     loss = getattr(torch.nn, config.optimization.loss.name)(**config.optimization.loss.args)
@@ -164,20 +164,17 @@ def build_loss(
 
 
 def build_optimizer(
-        model, config: DictConfig,
+    model,
+    config: DictConfig,
 ) -> torch.optim.Optimizer:
     """Builds optimizer."""
     optimizer = getattr(torch.optim, config.optimization.optimizer.name)(
-        model.parameters(),
-        **config.optimization.optimizer.kwargs
+        model.parameters(), **config.optimization.optimizer.kwargs
     )
     return optimizer
 
 
-def build_scheduler(
-        optimizer,
-        config: DictConfig
-) -> torch.optim.lr_scheduler.LRScheduler:
+def build_scheduler(optimizer, config: DictConfig) -> torch.optim.lr_scheduler.LRScheduler:
     """Builds learning rate scheduler."""
     if config.optimization.scheduler.name == "LambdaLR":
         warmup_steps = config.optimization.scheduler.kwargs.get("warmup_steps", 10000)
@@ -190,14 +187,10 @@ def build_scheduler(
 
             return scheduler_gamma ** (step / decay_steps)
 
-        _scheduler = getattr(torch.optim.lr_scheduler, "LambdaLR")(
-            optimizer,
-            lr_lambda=warm_and_decay_lr_scheduler
-        )
+        _scheduler = getattr(torch.optim.lr_scheduler, "LambdaLR")(optimizer, lr_lambda=warm_and_decay_lr_scheduler)
         return _scheduler
 
     _scheduler = getattr(torch.optim.lr_scheduler, config.optimization.scheduler.name)(
-        optimizer,
-        **config.optimization.scheduler.kwargs
+        optimizer, **config.optimization.scheduler.kwargs
     )
     return _scheduler

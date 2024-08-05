@@ -1,0 +1,151 @@
+[project]
+name = "ViTSSM"
+requires-python = "==3.12"
+authors = [
+    { name = "David Kuernsteiner", email = "david.kuernsteiner@bmw.com" }
+]
+repository = "https://github.com/davidkuernsteiner/ViTSSM.git"
+
+[tool.black]
+# https://github.com/psf/black
+target-version = ["py312"]
+line-length = 120
+color = true
+exclude = '''
+/(
+    \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+    | env
+    | venv
+)/
+'''
+
+[tool.ruff]
+line-length = 120
+lint.select = ["ALL"]
+extend-exclude = [
+    "ext/",
+    "run_configs/",
+    "data/",
+]
+force-exclude = true
+lint.ignore = [
+    "D203", # one blank line required before class docstring
+    "D213", # multi line summary should start at second line
+    "D401", # docstrings should start with non-imperative mood
+    "E501", # line too long, handled by black
+    "F403", # disallow * import, otherwise allow at module level (F406)
+    "B008", # do not perform function calls in argument defaults
+    "S101", # do not use assert,
+    "PD901", # do not use 'df' as a variable name
+    "PLR0911", # too many return statements
+    "ANN101", # missing type annotations for 'self'
+    "D107", # missing docstring for '__init__'
+    "TCH", # require type checking block
+    "PLR0913", # too many function arguments
+    "N818", # exception should be Error-suffixed
+    "FIX002", # immediately fix open to-dos
+    "TD003", # require issue link for to-dos
+    "DTZ007", # require timezone when parsing time
+    "PLR2004", # usage of magic values
+    "D100", # require docstrings in modules
+    "D104", # require docstrings in packages
+    "PYI041", # float instead int | float (clashes with beartype)
+    "INP001", # add __init__.py for implicit namespace package
+    "G004", # logging statement uses f-string
+    "D102", # Missing docstring in public method
+    "FA102", # PEP 604 union without future import
+    "ANN401", # dynamically typed Any
+    "TID252", # prefer absolute imports
+    "DTZ", # datetime without tz
+    "TRY201", # raise without exception name
+    "TRY300", # else instead of return in try statement
+    "S608", # possible sql injection with f-string
+    "ERA001", # commented-out code
+    "PD015", # merge instead of pd.merge
+    "TID252", # allow relative imports
+    "UP007", # auto-rewrite type annotations
+]
+
+[tool.ruff.lint.isort]
+# Combine multiple `from foo import bar as baz` statements with the same source
+# (`foo`) into a single statement.
+combine-as-imports = true
+# Imports of the form `from foo import bar as baz` show one `import bar as baz`
+# per line. Useful for __init__.py files that just re-export symbols.
+force-wrap-aliases = true
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.lint.flake8-tidy-imports]
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"beartype".msg = "Do not import from beartype, import from safecheck instead."
+"plum".msg = "Do not import from plum, import from safecheck instead."
+"jaxtyping".msg = "Do not import from jaxtype, import from safecheck instead."
+
+[tool.pyright]
+include = ["vitssm"]
+reportPrivateImportUsage = false
+reportConstantRedefinition = true
+reportDuplicateImport = true
+reportFunctionMemberAccess = true
+reportImportCycles = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportIncompleteStub = "warning"
+reportInconsistentConstructor = true
+reportInvalidStubStatement = "warning"
+reportMatchNotExhaustive = true
+reportMissingParameterType = true
+reportMissingTypeArgument = false
+reportOverlappingOverload = true
+reportPrivateUsage = false
+reportTypeCommentUsage = "warning"
+reportUnknownArgumentType = false
+reportUnknownLambdaType = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportUnnecessaryCast = true
+reportUnnecessaryComparison = true
+reportUnnecessaryContains = true
+reportUnnecessaryIsInstance = true
+reportUnnecessaryTypeIgnoreComment = true
+reportUnusedClass = true
+reportUnusedImport = true
+reportUnusedFunction = true
+reportUnusedVariable = true
+reportUnusedExpression = true
+reportUnusedCallResult = false
+reportUntypedBaseClass = false
+reportUntypedClassDecorator = false
+reportUntypedFunctionDecorator = false
+reportUntypedNamedTuple = false
+reportCallInDefaultInitializer = false
+reportImplicitStringConcatenation = false
+reportMissingSuperCall = true
+reportPropertyTypeMismatch = true
+reportUninitializedInstanceVariable = true
+
+[tool.pytest.ini_options]
+# https://docs.pytest.org/en/6.2.x/customize.html#pyproject-toml
+# Directories that are not visited by pytest collector:
+norecursedirs = ["hooks", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
+addopts = ["--strict-markers", "--tb=short"]
+filterwarnings = ["ignore::UserWarning"]
+pythonpath = ["."]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = ["pragma: no cover", "@overload"]

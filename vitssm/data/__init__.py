@@ -11,21 +11,21 @@ from .datasets import VideoMDSpritesDataset, NextFrameDataset
 
 
 def build_transforms(
-        config: DictConfig,
+    config: DictConfig,
 ) -> Compose:
     """Builds image transformations."""
-    transform = Compose([
-        Resize(config.dataset.resolution),
-        ToDtype(torch.float32, scale=True),
-        Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    transform = Compose(
+        [
+            Resize(config.dataset.resolution),
+            ToDtype(torch.float32, scale=True),
+            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
 
     return transform
 
 
-def build_dataset(
-        config: DictConfig
-) -> Union[VisionDataset, NextFrameDataset]:
+def build_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
     """Builds dataset given config."""
     data_root = Path(config.root_dir, config.dataset.get("root", "data"))
 
@@ -52,7 +52,7 @@ def build_dataset(
         case "ucf101":
             return UCF101(
                 root=data_root / "UCF-101",
-                annotation_path= data_root / "splits" / "ucfTrainTestlist",
+                annotation_path=data_root / "splits" / "ucfTrainTestlist",
                 frames_per_clip=config.dataset.get("frames_per_clip", 16),
                 step_between_clips=config.dataset.get("step_between_clips", 1),
                 train=config.dataset.get("mode", "train") == "train",
@@ -63,7 +63,7 @@ def build_dataset(
         case "hmdb51":
             return HMDB51(
                 root=data_root / "HMDB51",
-                annotation_path= data_root / "splits" / "testTrainMulti_7030_splits",
+                annotation_path=data_root / "splits" / "testTrainMulti_7030_splits",
                 frames_per_clip=config.dataset.get("frames_per_clip", 16),
                 train=config.dataset.get("mode", "train") == "train",
                 transform=build_transforms(config),
@@ -78,39 +78,38 @@ def build_dataset(
 
 
 def build_dataloaders(
-        config: DictConfig,
+    config: DictConfig,
 ) -> Union[DataLoader, Tuple[DataLoader, DataLoader]]:
     """Builds dataloaders for training and validation."""
     dataset = build_dataset(config)
 
     if config.dataset.mode == "train":
         train_set, val_set = random_split(
-            dataset,
-            [config.dataset.train_percentage, 1 - config.dataset.train_percentage]
+            dataset, [config.dataset.train_percentage, 1 - config.dataset.train_percentage]
         )
 
-        train_loader = DataLoader(train_set,
-                                  batch_size=config.optimization.batch_size,
-                                  shuffle=True,
-                                  num_workers=config.dataset.get("num_workers", 1),
-                                  pin_memory=config.dataset.get("pin_memory", False)
-                                  )
-        val_loader = DataLoader(val_set,
-                                batch_size=config.optimization.get(
-                                    "val_batch_size",
-                                    config.optimization.batch_size
-                                ),
-                                shuffle=False,
-                                num_workers=config.dataset.get("num_workers", 1),
-                                pin_memory=config.dataset.get("pin_memory", False)
-                                )
+        train_loader = DataLoader(
+            train_set,
+            batch_size=config.optimization.batch_size,
+            shuffle=True,
+            num_workers=config.dataset.get("num_workers", 1),
+            pin_memory=config.dataset.get("pin_memory", False),
+        )
+        val_loader = DataLoader(
+            val_set,
+            batch_size=config.optimization.get("val_batch_size", config.optimization.batch_size),
+            shuffle=False,
+            num_workers=config.dataset.get("num_workers", 1),
+            pin_memory=config.dataset.get("pin_memory", False),
+        )
 
         return train_loader, val_loader
 
     else:
-        return DataLoader(dataset,
-                          batch_size=config.optimization.batch_size,
-                          shuffle=False,
-                          num_workers=config.get("num_workers", 1),
-                          pin_memory=config.dataset.get("pin_memory", False)
-                          )
+        return DataLoader(
+            dataset,
+            batch_size=config.optimization.batch_size,
+            shuffle=False,
+            num_workers=config.get("num_workers", 1),
+            pin_memory=config.dataset.get("pin_memory", False),
+        )

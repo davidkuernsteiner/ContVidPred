@@ -9,4 +9,3 @@ def set_seeds(seed: int) -> None:
     np.random.seed(seed)
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
-
