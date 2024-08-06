@@ -6,6 +6,7 @@ from torch import nn
 from torch import Tensor
 from timm.models.vision_transformer import VisionTransformer
 from xformers.components.positional_embedding import SinePositionalEmbedding
+from xformers.components.attention import ScaledDotProduct
 
 
 class LatentNextFramePrediction(nn.Module):
@@ -81,6 +82,7 @@ class FrameEncoder(nn.Module):
 class LatentPredictor(nn.Module):
     def __init__(self):
         super().__init__()
+        self.attention = ScaledDotProduct()
 
     def forward(self, x):
         """
