@@ -165,8 +165,6 @@ checkpoints
 
 # Node modules
 node_modules
-# Pretrained Models
-models
 
 package-lock.json
 package.json
