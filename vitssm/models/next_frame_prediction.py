@@ -35,7 +35,7 @@ class LatentNextFramePrediction(nn.Module):
         self.latent_frame_decoder = LatentFrameDecoder()
 
         self.patchify = nn.Conv2d(3, latent_dim, kernel_size=patch_size, stride=patch_size)
-        self.pos_enc = SinePositionalEmbedding(dim_model=latent_dim)
+        self.pos_enc = nn.Parameter(torch.randn(1, (frame_in_size // patch_size)**2, latent_dim) * .02)
 
         self.frame_in_size = frame_in_size
         self.frame_out_size = frame_out_size
