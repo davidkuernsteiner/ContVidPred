@@ -8,9 +8,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import Tensor
-
-from timm.layers.pos_embed import resample_abs_pos_embed
-
+from xformers.components.multi_head_dispatch import MultiHeadDispatch
+from xformers.components.attention import ScaledDotProduct, LocalAttention
+from xformers.components.feedforward import MLP
 
 
 class LearnablePositionalEncoding(nn.Module):
@@ -34,7 +34,10 @@ class LearnablePositionalEncoding(nn.Module):
         Output dims: [batch, token, latent]
         """
         _, t, _ = x.shape
-        pos_enc = self.resample_pos_enc(t)
+        if t != self.n_tokens:
+            pos_enc = self.resample_pos_enc(t)
+        else: 
+            pos_enc = self.pos_enc
 
         return self.dropout(x + pos_enc)
 
@@ -52,3 +55,45 @@ class LearnablePositionalEncoding(nn.Module):
 
         return pos_enc
     
+
+class MixedCrossAttentionBlock(nn.Module):
+    def __init__(
+        self,
+        latent_dim: int = 128,
+        n_heads: int = 4,
+        residual_dropout: float = 0.,
+        mlp_dropout: float = 0.,
+        mlp_multiplier: int = 2,
+    ) -> None:
+        super().__init__()
+
+        attention_mechanism = ScaledDotProduct()
+        self.patch_attention = MultiHeadDispatch(
+            dim_model=latent_dim,
+            num_heads=n_heads,
+            attention=attention_mechanism,
+            residual_dropout=residual_dropout,
+        )
+        self.latent_attention = MultiHeadDispatch(
+            dim_model=latent_dim,
+            num_heads=n_heads,
+            attention=attention_mechanism,
+            residual_dropout=residual_dropout,
+        )
+
+        self.norm1 = nn.LayerNorm(latent_dim, eps=1e-6, elementwise_affine=True)
+        self.norm2 = nn.LayerNorm(latent_dim, eps=1e-6, elementwise_affine=True)
+        self.norm3 = nn.LayerNorm(latent_dim, eps=1e-6, elementwise_affine=True)
+        self.norm4 = nn.LayerNorm(latent_dim, eps=1e-6, elementwise_affine=True)
+
+        self.mlp1 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=nn.GELU, hidden_layer_multiplier=mlp_multiplier)
+        self.mlp2 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=nn.GELU , hidden_layer_multiplier=mlp_multiplier)
+
+    def forward(self, x_query: torch.Tensor, x_kv1: torch.Tensor, x_kv2: torch.Tensor):
+        x_query = x_query + self.norm1(self.patch_attention(query=x_query, key=x_kv1, value=x_kv1))
+        x_query = x_query + self.norm2(self.mlp1(x_query))
+
+        x_query = x_query + self.norm3(self.patch_attention(query=x_query, key=x_kv2, value=x_kv2))
+        x_query = x_query + self.norm4(self.mlp2(x_query))
+
+        return x_query
