@@ -11,6 +11,7 @@ from torch import Tensor
 from xformers.components.multi_head_dispatch import MultiHeadDispatch
 from xformers.components.attention import ScaledDotProduct, LocalAttention
 from xformers.components.feedforward import MLP
+from xformers.components.activations import Activation
 
 
 class LearnablePositionalEncoding(nn.Module):
@@ -86,14 +87,15 @@ class MixedCrossAttentionBlock(nn.Module):
         self.norm3 = nn.LayerNorm(latent_dim, eps=1e-6, elementwise_affine=True)
         self.norm4 = nn.LayerNorm(latent_dim, eps=1e-6, elementwise_affine=True)
 
-        self.mlp1 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=nn.GELU, hidden_layer_multiplier=mlp_multiplier)
-        self.mlp2 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=nn.GELU , hidden_layer_multiplier=mlp_multiplier)
+        self.mlp1 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=Activation.GeLU, hidden_layer_multiplier=mlp_multiplier)
+        self.mlp2 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=Activation.GeLU , hidden_layer_multiplier=mlp_multiplier)
 
-    def forward(self, x_query: torch.Tensor, x_kv1: torch.Tensor, x_kv2: torch.Tensor):
-        x_query = x_query + self.norm1(self.patch_attention(query=x_query, key=x_kv1, value=x_kv1))
+    def forward(self, inputs: dict[str, torch.Tensor]):
+        x_query, x_kv1, x_kv2 = inputs["x_query"], inputs["x_kv1"], inputs["x_kv2"]
+        x_query = x_query + self.norm1(self.patch_attention(x_query, key=x_kv1, value=x_kv1))
         x_query = x_query + self.norm2(self.mlp1(x_query))
 
-        x_query = x_query + self.norm3(self.patch_attention(query=x_query, key=x_kv2, value=x_kv2))
+        x_query = x_query + self.norm3(self.patch_attention(x_query, key=x_kv2, value=x_kv2))
         x_query = x_query + self.norm4(self.mlp2(x_query))
 
-        return x_query
+        return x_query, x_kv1, x_kv2

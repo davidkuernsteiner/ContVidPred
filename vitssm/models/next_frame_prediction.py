@@ -10,7 +10,7 @@ from xformers.components.positional_embedding import SinePositionalEmbedding
 from xformers.components.attention import ScaledDotProduct, LocalAttention
 from xformers.components.multi_head_dispatch import MultiHeadDispatch
 
-from .modules import LearnablePositionalEncoding
+from .modules import LearnablePositionalEncoding, MixedCrossAttentionBlock
 
 
 class LatentNextFramePrediction(nn.Module):
@@ -47,7 +47,7 @@ class LatentNextFramePrediction(nn.Module):
             stride=patch_size,
             )
         self.pos_enc_patches = LearnablePositionalEncoding(
-            n_tokens=(frame_in_size // patch_size)**2, 
+            n_tokens=(frame_in_size[0] // patch_size) * (frame_in_size[1] // patch_size),
             latent_dim=latent_dim, 
             p_dropout=pos_enc_dropout,
         )
@@ -76,11 +76,16 @@ class LatentNextFramePrediction(nn.Module):
         x_latent = rearrange(x, "b t h w c -> (b t) c h w")
         x_latent = self.frame_encoder(x_latent)
         x_latent = rearrange(x_latent, "(b t) e -> b t e", b=b, t=t)
-        #x_latent = self.pos_enc(x_latent)
         x_next_latent = self.latent_predictor(x_latent)
 
-        canvas = self.pos_enc_patches(torch.ones(b * t, (self.frame_out_size // self.patch_size)**2, self.latent_dim))
-        x_next_frame = self.latent_frame_decoder(x_next_latent, x_patches, canvas)
+        canvas = self.pos_enc_patches(torch.ones(b, self.frame_out_size[0] * self.frame_out_size[1], self.latent_dim))
+        x_next_frame = self.latent_frame_decoder(canvas, x_patches, x_next_latent)
+        x_next_frame = rearrange(
+            x_next_frame,
+            "b (h w) c -> b h w c",
+            h=self.frame_out_size[0],
+            w=self.frame_out_size[1],
+        )
 
         return x_next_frame
 
@@ -96,7 +101,7 @@ class FrameEncoder(nn.Module):
         mlp_ratio: float = 3.0,
         qkv_bias: bool = False,
         norm_layer: nn.Module = nn.LayerNorm,
-    ):
+    ) -> None:
         super().__init__()
         self.backbone = VisionTransformer(
             img_size=frame_in_size,
@@ -111,7 +116,7 @@ class FrameEncoder(nn.Module):
             class_token=True,
         )
 
-    def forward(self, x: Tensor):
+    def forward(self, x: Tensor) -> torch.Tensor:
         """
         Input dims: [batch * time, channel, height, width]
         Output dims: [batch * time, latent]
@@ -136,7 +141,7 @@ class LatentPredictor(nn.Module):
             *(MultiHeadDispatch(latent_dim, n_heads, attention_mechanism) for _ in range(n_blocks))
         )
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Input dims: [batch, time, latent]
         Output dims: [batch, time, latent]
@@ -145,21 +150,42 @@ class LatentPredictor(nn.Module):
 
 
 class LatentFrameDecoder(nn.Module):
-    def __init__(self):
+    def __init__(
+        self,
+        n_blocks: int = 4,
+        latent_dim: int = 128,
+        n_heads: int = 4,
+        residual_dropout: float = 0.,
+        mlp_dropout: float = 0.,
+        mlp_multiplier: int = 2,
+    ) -> None:
         super().__init__()
 
+        self.blocks = nn.Sequential(*[
+            MixedCrossAttentionBlock(
+                latent_dim=latent_dim,
+                n_heads=n_heads,
+                residual_dropout=residual_dropout,
+                mlp_dropout=mlp_dropout,
+                mlp_multiplier=mlp_multiplier,
+            ) for _ in range(n_blocks)
+        ])
 
-    def forward(
-            self,
-            x_latent: torch.Tensor,
-            x_patches: torch.Tensor, 
-            canvas: torch.Tensor,
-        ):
+
+    def forward(self, x_query: torch.Tensor, x_patches: torch.Tensor, x_latent: torch.Tensor) -> torch.Tensor:
         """
         Input dims:
-            latent predictor: [batch, time, latent]
-            frame patchify: [batch, time, height_patches, width_patches, latent]
+            x_query: [batch, height * width, latent]
+            x_patches: [batch, time, height_patches, width_patches, latent]
+            x_latent: [batch, time, latent]
 
         Output dims: [batch, time, height_out, width_out, channel]
         """
-        print(f"x_latent: {x_latent.shape}\nx_patches: {x_patches.shape}\ncanvas: {canvas.shape}")
+        inputs = {
+            "x_query": x_query,
+            "x_kv1": x_patches,
+            "x_kv2": x_latent,
+        }
+        x_query, _, _ = self.blocks(inputs)
+
+        return x_query
