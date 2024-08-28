@@ -90,12 +90,13 @@ class MixedCrossAttentionBlock(nn.Module):
         self.mlp1 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=Activation.GeLU, hidden_layer_multiplier=mlp_multiplier)
         self.mlp2 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=Activation.GeLU , hidden_layer_multiplier=mlp_multiplier)
 
-    def forward(self, inputs: dict[str, torch.Tensor]):
-        x_query, x_kv1, x_kv2 = inputs["x_query"], inputs["x_kv1"], inputs["x_kv2"]
+    def forward(self, inputs: Tuple[Tensor, Tensor, Tensor]) -> Tuple[Tensor, Tensor, Tensor]:
+        x_query, x_kv1, x_kv2 = inputs
+        print(x_query.shape, x_kv1.shape, x_kv2.shape)
         x_query = x_query + self.norm1(self.patch_attention(x_query, key=x_kv1, value=x_kv1))
         x_query = x_query + self.norm2(self.mlp1(x_query))
 
-        x_query = x_query + self.norm3(self.patch_attention(x_query, key=x_kv2, value=x_kv2))
+        x_query = x_query + self.norm3(self.latent_attention(x_query, key=x_kv2, value=x_kv2))
         x_query = x_query + self.norm4(self.mlp2(x_query))
 
         return x_query, x_kv1, x_kv2

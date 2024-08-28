@@ -1,8 +1,9 @@
 from typing import Union, Tuple
 
 
-from einops import rearrange
+from einops import rearrange, repeat
 import torch
+from huggingface_hub.hf_file_system import reopen
 from torch import nn
 from torch import Tensor
 from timm.models.vision_transformer import VisionTransformer
@@ -38,7 +39,14 @@ class LatentNextFramePrediction(nn.Module):
             n_frames=n_frames,
             window_size=window_size,
         )
-        self.latent_frame_decoder = LatentFrameDecoder()
+        self.latent_frame_decoder = LatentFrameDecoder(
+            n_blocks=4,
+            latent_dim=latent_dim,
+            n_heads=4,
+            residual_dropout=0.,
+            mlp_dropout=0.,
+            mlp_multiplier=2,
+        )
 
         self.patchify = nn.Conv2d(
             3, 
@@ -71,14 +79,16 @@ class LatentNextFramePrediction(nn.Module):
         x_patches = self.patchify(x_patches)
         x_patches = rearrange(x_patches, "(b t) e hp wp -> (b t) (hp wp) e", b=b, t=t)
         x_patches = self.pos_enc_patches(x_patches)
-        x_patches = rearrange(x_patches, "(b t) (hp wp) e -> b t (hp wp) e", b=b, t=t, wp=wp, hp=hp)
+        #x_patches = rearrange(x_patches, "(b t) (hp wp) e -> b t (hp wp) e", b=b, t=t, wp=wp, hp=hp)
 
         x_latent = rearrange(x, "b t h w c -> (b t) c h w")
         x_latent = self.frame_encoder(x_latent)
         x_latent = rearrange(x_latent, "(b t) e -> b t e", b=b, t=t)
         x_next_latent = self.latent_predictor(x_latent)
+        x_next_latent = repeat(x_next_latent, "b t e -> (b p) t e", p=t)
 
         canvas = self.pos_enc_patches(torch.ones(b, self.frame_out_size[0] * self.frame_out_size[1], self.latent_dim))
+        canvas = repeat(canvas, "b t e -> (b p) t e", p=t)
         x_next_frame = self.latent_frame_decoder(canvas, x_patches, x_next_latent)
         x_next_frame = rearrange(
             x_next_frame,
@@ -96,7 +106,7 @@ class FrameEncoder(nn.Module):
         frame_in_size: Union[int, Tuple[int, int]] = 256,
         patch_size: int = 16,
         depth: int = 8,
-        latent_dim: int = 96,
+        latent_dim: int = 64,
         n_heads: int = 8,
         mlp_ratio: float = 3.0,
         qkv_bias: bool = False,
@@ -181,11 +191,7 @@ class LatentFrameDecoder(nn.Module):
 
         Output dims: [batch, time, height_out, width_out, channel]
         """
-        inputs = {
-            "x_query": x_query,
-            "x_kv1": x_patches,
-            "x_kv2": x_latent,
-        }
+        inputs = x_query, x_patches, x_latent
         x_query, _, _ = self.blocks(inputs)
 
         return x_query
