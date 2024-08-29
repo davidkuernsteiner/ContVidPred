@@ -1,14 +1,11 @@
 from typing import Union, Tuple
 
-
-from einops import rearrange, repeat
 import torch
-from huggingface_hub.hf_file_system import reopen
-from torch import nn
-from torch import Tensor
+from einops import rearrange, repeat
 from timm.models.vision_transformer import VisionTransformer
-from xformers.components.positional_embedding import SinePositionalEmbedding
-from xformers.components.attention import ScaledDotProduct, LocalAttention
+from torch import Tensor
+from torch import nn
+from xformers.components.attention import LocalAttention
 from xformers.components.multi_head_dispatch import MultiHeadDispatch
 
 from .modules import LearnablePositionalEncoding, MixedCrossAttentionBlock
@@ -59,6 +56,7 @@ class LatentNextFramePrediction(nn.Module):
             latent_dim=latent_dim, 
             p_dropout=pos_enc_dropout,
         )
+        self.patch_token_decoder = nn.Linear(latent_dim, patch_size * patch_size * 3)
 
         self.frame_in_size = frame_in_size
         self.frame_out_size = frame_out_size
@@ -74,6 +72,7 @@ class LatentNextFramePrediction(nn.Module):
         """
         b, t, h, w, c = x.shape
         hp, wp = h // self.patch_size, w // self.patch_size
+        hp_out, wp_out = self.frame_out_size[0] // self.patch_size, self.frame_out_size[1] // self.patch_size
 
         x_patches = rearrange(x, "b t h w c -> (b t) c h w")
         x_patches = self.patchify(x_patches)
@@ -85,14 +84,16 @@ class LatentNextFramePrediction(nn.Module):
         x_latent = self.frame_encoder(x_latent)
         x_latent = rearrange(x_latent, "(b t) e -> b t e", b=b, t=t)
         x_next_latent = self.latent_predictor(x_latent)
-        x_next_latent = repeat(x_next_latent, "b t e -> (b p) t e", p=t)
+        x_next_latent = repeat(x_next_latent, "b t e -> (b t) i e", i=1)
 
-        canvas = self.pos_enc_patches(torch.ones(b, self.frame_out_size[0] * self.frame_out_size[1], self.latent_dim))
-        canvas = repeat(canvas, "b t e -> (b p) t e", p=t)
+        canvas = self.pos_enc_patches(torch.ones(b, hp_out * wp_out, self.latent_dim))
+        canvas = repeat(canvas, "b (hp wp) e -> (b t) (hp wp) e", t=t)
         x_next_frame = self.latent_frame_decoder(canvas, x_patches, x_next_latent)
+        x_next_frame = self.patch_token_decoder(x_next_frame)
         x_next_frame = rearrange(
             x_next_frame,
-            "b (h w) c -> b h w c",
+            "(b t) (hp wp) (h w c) -> b t hp wp c",
+            t=t,
             h=self.frame_out_size[0],
             w=self.frame_out_size[1],
         )
@@ -171,7 +172,7 @@ class LatentFrameDecoder(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.blocks = nn.Sequential(*[
+        self.blocks = nn.Sequential(*(
             MixedCrossAttentionBlock(
                 latent_dim=latent_dim,
                 n_heads=n_heads,
@@ -179,13 +180,13 @@ class LatentFrameDecoder(nn.Module):
                 mlp_dropout=mlp_dropout,
                 mlp_multiplier=mlp_multiplier,
             ) for _ in range(n_blocks)
-        ])
+        ))
 
 
     def forward(self, x_query: torch.Tensor, x_patches: torch.Tensor, x_latent: torch.Tensor) -> torch.Tensor:
         """
         Input dims:
-            x_query: [batch, height * width, latent]
+            x_query: [batch * time, height * width, latent]
             x_patches: [batch, time, height_patches, width_patches, latent]
             x_latent: [batch, time, latent]
 
