@@ -6,14 +6,19 @@ from .shapes import Shape
 
 
 class Frame:
-    def __init__(self, shape: tuple, background: str, shapes: list[Shape]):
-        self.h = shape[0]
-        self.w = shape[1]
-        self.background = tuple(255 * i for i in to_rgb(background))
+    def __init__(
+        self,
+        size: tuple[int, int],
+        background_color: str,
+        shapes: list[Shape]
+    ) -> None:
+        self.h = size[0]
+        self.w = size[1]
+        self.background_color = tuple(255 * i for i in to_rgb(background_color))
         self.shapes = shapes
 
     def draw(self):
-        img = Image.fromarray(np.full((self.h, self.w, 3), self.background, dtype=np.uint8))
+        img = Image.fromarray(np.full((self.h, self.w, 3), self.background_color, dtype=np.uint8))
         mask_full = np.zeros((self.h, self.w), dtype=np.uint8)
         draw = ImageDraw.Draw(img)
         for i, shape in enumerate(self.shapes):
@@ -31,14 +36,20 @@ class Frame:
 
 class Video(Frame):
 
-    def __init__(self, res: tuple, background, shapes: list[Shape], video_length: int = 1000):
-        super().__init__(res, background, shapes)
-        self.video_length = video_length
+    def __init__(
+        self,
+        res: tuple[int, int],
+        background_color: str,
+        shapes: list[Shape],
+        n_frames: int = 1000,
+    ) -> None:
+        super().__init__(res, background_color, shapes)
+        self.n_frames = n_frames
         self.velocities = np.random.uniform(-5, 5, (len(self.shapes), 2))
 
     def make(self):
         frames, masks = [], [[] for _ in range(len(self.shapes))]
-        for i, frame in enumerate(range(self.video_length)):
+        for i, frame in enumerate(range(self.n_frames)):
             for j, shape in enumerate(self.shapes):
                 shape.position += self.velocities[j]
                 if (shape.position[0] > self.h - shape.size[0]) or (shape.position[0] < 0 + shape.size[0]):
@@ -46,9 +57,9 @@ class Video(Frame):
                 elif (shape.position[1] > self.w - shape.size[1]) or (shape.position[1] < 0 + shape.size[1]):
                     self.velocities[j][1] = -self.velocities[j][1]
             res = self.draw()
-            frames.append(res[0])
+            frames.append(np.array(res[0]))
 
             for j in range(len(self.shapes)):
-                masks[j].append(res[1][j])
+                masks[j].append(np.array(res[1][j]))
 
         return frames, masks

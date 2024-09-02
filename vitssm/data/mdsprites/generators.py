@@ -1,4 +1,4 @@
-from typing import Tuple, Union, Generator
+from typing import Union, Generator
 
 import numpy as np
 
@@ -8,7 +8,7 @@ from PIL.ImageColor import getcolor
 
 
 def generate_images(
-    img_size, shapes: list, n_shapes: Union[int, Tuple[int, int]], colors: list, background: str, n_images: int
+    img_size, shapes: list, n_shapes: Union[int, tuple[int, int]], colors: list, background: str, n_images: int
 ) -> Generator:
 
     for _ in range(n_images):
@@ -29,14 +29,13 @@ def generate_images(
 def generate_videos(
     resolution,
     shapes: list,
-    n_shapes: Union[int, Tuple[int, int]],
+    n_shapes: Union[int, tuple[int, int]],
     colors: list,
     background: str,
-    n_videos: int,
     video_length: int = 1000,
 ) -> Generator:
 
-    for _ in range(n_videos):
+    while True:
         n_ = n_shapes if isinstance(n_shapes, int) else np.random.randint(n_shapes[0], n_shapes[1] + 1)
         shapes_ = np.random.choice(shapes, n_)
         colors_ = np.random.choice(colors, n_)
