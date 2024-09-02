@@ -21,7 +21,7 @@ class LatentNextFramePrediction(nn.Module):
         patch_size: int = 16,
         latent_dim: int = 768,
         n_heads: int = 8,
-        pos_enc_dropout: float = 0.
+        pos_enc_dropout: float = 0.0,
     ):
         super().__init__()
         self.frame_encoder = FrameEncoder(
@@ -40,20 +40,20 @@ class LatentNextFramePrediction(nn.Module):
             n_blocks=4,
             latent_dim=latent_dim,
             n_heads=4,
-            residual_dropout=0.,
-            mlp_dropout=0.,
+            residual_dropout=0.0,
+            mlp_dropout=0.0,
             mlp_multiplier=2,
         )
 
         self.patchify = nn.Conv2d(
-            3, 
-            latent_dim, 
-            kernel_size=patch_size, 
+            3,
+            latent_dim,
+            kernel_size=patch_size,
             stride=patch_size,
-            )
+        )
         self.pos_enc_patches = LearnablePositionalEncoding(
             n_tokens=(frame_in_size[0] // patch_size) * (frame_in_size[1] // patch_size),
-            latent_dim=latent_dim, 
+            latent_dim=latent_dim,
             p_dropout=pos_enc_dropout,
         )
         self.patch_token_decoder = nn.Linear(latent_dim, patch_size * patch_size * 3)
@@ -71,14 +71,14 @@ class LatentNextFramePrediction(nn.Module):
         Output dims: [batch, time, height, width, channel]
         """
         b, t, h, w, c = x.shape
-        hp, wp = h // self.patch_size, w // self.patch_size
         hp_out, wp_out = self.frame_out_size[0] // self.patch_size, self.frame_out_size[1] // self.patch_size
+        ph, pw = self.patch_size, self.patch_size
 
         x_patches = rearrange(x, "b t h w c -> (b t) c h w")
         x_patches = self.patchify(x_patches)
         x_patches = rearrange(x_patches, "(b t) e hp wp -> (b t) (hp wp) e", b=b, t=t)
         x_patches = self.pos_enc_patches(x_patches)
-        #x_patches = rearrange(x_patches, "(b t) (hp wp) e -> b t (hp wp) e", b=b, t=t, wp=wp, hp=hp)
+        # x_patches = rearrange(x_patches, "(b t) (hp wp) e -> b t (hp wp) e", b=b, t=t, wp=wp, hp=hp)
 
         x_latent = rearrange(x, "b t h w c -> (b t) c h w")
         x_latent = self.frame_encoder(x_latent)
@@ -87,15 +87,18 @@ class LatentNextFramePrediction(nn.Module):
         x_next_latent = repeat(x_next_latent, "b t e -> (b t) i e", i=1)
 
         canvas = self.pos_enc_patches(torch.ones(b, hp_out * wp_out, self.latent_dim))
-        canvas = repeat(canvas, "b (hp wp) e -> (b t) (hp wp) e", t=t)
+        canvas = repeat(canvas, "b (hp wp) e -> (b t) (hp wp) e", hp=hp_out, wp=wp_out, t=t)
         x_next_frame = self.latent_frame_decoder(canvas, x_patches, x_next_latent)
         x_next_frame = self.patch_token_decoder(x_next_frame)
         x_next_frame = rearrange(
             x_next_frame,
-            "(b t) (hp wp) (h w c) -> b t hp wp c",
+            "(b t) (hp wp) (ph pw c) -> b t (hp ph) (wp pw) c",
             t=t,
-            h=self.frame_out_size[0],
-            w=self.frame_out_size[1],
+            hp=hp_out,
+            wp=hp_out,
+            ph=ph,
+            pw=pw,
+            c=3,
         )
 
         return x_next_frame
@@ -127,7 +130,7 @@ class FrameEncoder(nn.Module):
             class_token=True,
         )
 
-    def forward(self, x: Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Input dims: [batch * time, channel, height, width]
         Output dims: [batch * time, latent]
@@ -152,7 +155,7 @@ class LatentPredictor(nn.Module):
             *(MultiHeadDispatch(latent_dim, n_heads, attention_mechanism) for _ in range(n_blocks))
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         """
         Input dims: [batch, time, latent]
         Output dims: [batch, time, latent]
@@ -166,24 +169,26 @@ class LatentFrameDecoder(nn.Module):
         n_blocks: int = 4,
         latent_dim: int = 128,
         n_heads: int = 4,
-        residual_dropout: float = 0.,
-        mlp_dropout: float = 0.,
+        residual_dropout: float = 0.0,
+        mlp_dropout: float = 0.0,
         mlp_multiplier: int = 2,
     ) -> None:
         super().__init__()
 
-        self.blocks = nn.Sequential(*(
-            MixedCrossAttentionBlock(
-                latent_dim=latent_dim,
-                n_heads=n_heads,
-                residual_dropout=residual_dropout,
-                mlp_dropout=mlp_dropout,
-                mlp_multiplier=mlp_multiplier,
-            ) for _ in range(n_blocks)
-        ))
+        self.blocks = nn.Sequential(
+            *(
+                MixedCrossAttentionBlock(
+                    latent_dim=latent_dim,
+                    n_heads=n_heads,
+                    residual_dropout=residual_dropout,
+                    mlp_dropout=mlp_dropout,
+                    mlp_multiplier=mlp_multiplier,
+                )
+                for _ in range(n_blocks)
+            )
+        )
 
-
-    def forward(self, x_query: torch.Tensor, x_patches: torch.Tensor, x_latent: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_query: Tensor, x_patches: Tensor, x_latent: Tensor) -> Tensor:
         """
         Input dims:
             x_query: [batch * time, height * width, latent]

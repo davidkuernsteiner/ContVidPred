@@ -1,6 +1,4 @@
-from typing import Union, Tuple
-from functools import reduce
-from operator import mul
+from typing import Tuple
 from einops import rearrange
 from math import sqrt
 
@@ -9,27 +7,22 @@ from torch import nn
 import torch.nn.functional as F
 from torch import Tensor
 from xformers.components.multi_head_dispatch import MultiHeadDispatch
-from xformers.components.attention import ScaledDotProduct, LocalAttention
+from xformers.components.attention import ScaledDotProduct
 from xformers.components.feedforward import MLP
 from xformers.components.activations import Activation
 
 
 class LearnablePositionalEncoding(nn.Module):
-    def __init__(
-            self,
-            n_tokens: int,
-            latent_dim: int,
-            p_dropout: float = 0.
-        ):
+    def __init__(self, n_tokens: int, latent_dim: int, p_dropout: float = 0.0):
         super().__init__()
 
-        self.pos_enc = nn.Parameter(torch.randn(1, n_tokens, latent_dim) * .02)
+        self.pos_enc = nn.Parameter(torch.randn(1, n_tokens, latent_dim) * 0.02)
         self.dropout = nn.Dropout(p=p_dropout)
 
         self.n_tokens = n_tokens
         self.latent_dim = latent_dim
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: Tensor):
         """
         Input dims: [batch, token, latent]
         Output dims: [batch, token, latent]
@@ -37,7 +30,7 @@ class LearnablePositionalEncoding(nn.Module):
         _, t, _ = x.shape
         if t != self.n_tokens:
             pos_enc = self.resample_pos_enc(t)
-        else: 
+        else:
             pos_enc = self.pos_enc
 
         return self.dropout(x + pos_enc)
@@ -55,15 +48,15 @@ class LearnablePositionalEncoding(nn.Module):
         pos_enc = pos_enc.to(orig_dtype)
 
         return pos_enc
-    
+
 
 class MixedCrossAttentionBlock(nn.Module):
     def __init__(
         self,
         latent_dim: int = 128,
         n_heads: int = 4,
-        residual_dropout: float = 0.,
-        mlp_dropout: float = 0.,
+        residual_dropout: float = 0.0,
+        mlp_dropout: float = 0.0,
         mlp_multiplier: int = 2,
     ) -> None:
         super().__init__()
@@ -87,8 +80,18 @@ class MixedCrossAttentionBlock(nn.Module):
         self.norm3 = nn.LayerNorm(latent_dim, eps=1e-6, elementwise_affine=True)
         self.norm4 = nn.LayerNorm(latent_dim, eps=1e-6, elementwise_affine=True)
 
-        self.mlp1 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=Activation.GeLU, hidden_layer_multiplier=mlp_multiplier)
-        self.mlp2 = MLP(dim_model=latent_dim, dropout=mlp_dropout, activation=Activation.GeLU , hidden_layer_multiplier=mlp_multiplier)
+        self.mlp1 = MLP(
+            dim_model=latent_dim,
+            dropout=mlp_dropout,
+            activation=Activation.GeLU,
+            hidden_layer_multiplier=mlp_multiplier,
+        )
+        self.mlp2 = MLP(
+            dim_model=latent_dim,
+            dropout=mlp_dropout,
+            activation=Activation.GeLU,
+            hidden_layer_multiplier=mlp_multiplier,
+        )
 
     def forward(self, inputs: Tuple[Tensor, Tensor, Tensor]) -> Tuple[Tensor, Tensor, Tensor]:
         x_query, x_kv1, x_kv2 = inputs
