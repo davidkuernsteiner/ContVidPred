@@ -1,6 +1,7 @@
 import argparse
 import os
 from pathlib import Path
+from tqdm import tqdm
 
 from PIL import ImageColor
 from torchvision.io import write_video
@@ -39,7 +40,11 @@ video_generator = iter(generate_videos(
     video_length=args.video_length,
 ))
 
-for i in range(args.n_videos):
+for i in tqdm(
+    range(args.n_videos),
+    desc="Generating videos",
+    total=args.n_videos,
+):
     video, masks = next(video_generator)
     
     write_video(data_folder / "videos" / f"video_{i}.avi", video, fps=10)

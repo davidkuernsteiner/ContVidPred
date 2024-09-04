@@ -18,7 +18,6 @@ def generate_images(
     for _ in range(n_images):
         n_ = n_shapes if isinstance(n_shapes, int) else np.random.randint(n_shapes[0], n_shapes[1] + 1)
         shapes_ = np.random.choice(shapes, n_)
-        # colors_ = np.random.choice(colors, n_)
         colors_ = [(r, g, b) for r, g, b in np.random.randint(0, 256, (n_, 3))]
         positions = np.random.uniform(img_size * 0.1, img_size - img_size * 0.1, (n_, 2))
         sizes = np.round(np.random.uniform(img_size * 0.1, img_size * 0.3, (n_, 2))).astype(np.int32)
@@ -44,7 +43,6 @@ def generate_videos(
         n_ = n_shapes if isinstance(n_shapes, int) else np.random.randint(n_shapes[0], n_shapes[1] + 1)
         shapes_ = np.random.choice(shapes, n_)
         colors_ = np.random.choice(colors, n_)
-        # colors_ = np.random.randint(0, 256, (n_, 3))
         positions = np.random.uniform(resolution * 0.1, resolution - resolution * 0.1, (n_, 2))
         sizes = np.random.uniform(resolution * 0.1, resolution * 0.3, (n_, 2))
         shapes_ = [

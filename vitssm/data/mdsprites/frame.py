@@ -26,17 +26,17 @@ class Frame:
         draw = ImageDraw.Draw(img)
 
         masks = []
-        if self.masks:
-            mask_full = np.zeros((self.h, self.w), dtype=np.uint8)
-            for i, shape in enumerate(self.shapes):
-                shape.draw(draw)
+        mask_full = np.zeros((self.h, self.w), dtype=np.uint8)
+        for i, shape in enumerate(self.shapes):
+            shape.draw(draw)
+            if self.masks:
                 mask = Image.fromarray(np.zeros((self.h, self.w), dtype=np.uint8))
                 mask_draw = ImageDraw.Draw(mask)
                 shape.color = i + 1
                 shape.draw(mask_draw)
                 mask_full[np.array(mask) != 0] = i + 1
-
-            masks = [Image.fromarray(255 * np.array(mask_full == i, dtype=np.uint8)) for i in range(len(self.shapes) + 1)]
+        
+        masks = [Image.fromarray(255 * np.array(mask_full == i, dtype=np.uint8)) for i in range(len(self.shapes) + 1)] if self.masks else []
             
         return img, masks
 
