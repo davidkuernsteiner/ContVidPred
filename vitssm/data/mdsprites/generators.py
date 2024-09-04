@@ -27,7 +27,8 @@ def generate_images(
 
 
 def generate_videos(
-    resolution,
+    resolution: int,
+    masks: bool,
     shapes: list,
     n_shapes: Union[int, tuple[int, int]],
     colors: list,

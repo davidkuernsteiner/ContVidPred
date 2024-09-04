@@ -1,3 +1,5 @@
+from typing import Optional, Union
+
 import numpy as np
 from PIL import Image, ImageDraw
 from matplotlib.colors import to_rgb
@@ -10,40 +12,46 @@ class Frame:
         self,
         size: tuple[int, int],
         background_color: str,
-        shapes: list[Shape]
+        shapes: list[Shape],
+        masks: bool = False,
     ) -> None:
         self.h = size[0]
         self.w = size[1]
         self.background_color = tuple(255 * i for i in to_rgb(background_color))
         self.shapes = shapes
+        self.masks = masks
 
-    def draw(self):
+    def draw(self) -> Union[Image.Image, tuple[Image.Image, list[Image.Image]]]:
         img = Image.fromarray(np.full((self.h, self.w, 3), self.background_color, dtype=np.uint8))
-        mask_full = np.zeros((self.h, self.w), dtype=np.uint8)
         draw = ImageDraw.Draw(img)
-        for i, shape in enumerate(self.shapes):
-            shape.draw(draw)
-            mask = Image.fromarray(np.zeros((self.h, self.w), dtype=np.uint8))
-            mask_draw = ImageDraw.Draw(mask)
-            shape.color = i + 1
-            shape.draw(mask_draw)
-            mask_full[np.array(mask) != 0] = i + 1
 
-        masks = [Image.fromarray(255 * np.array(mask_full == i, dtype=np.uint8)) for i in range(len(self.shapes) + 1)]
+        if self.masks:
+            mask_full = np.zeros((self.h, self.w), dtype=np.uint8)
+            for i, shape in enumerate(self.shapes):
+                shape.draw(draw)
+                mask = Image.fromarray(np.zeros((self.h, self.w), dtype=np.uint8))
+                mask_draw = ImageDraw.Draw(mask)
+                shape.color = i + 1
+                shape.draw(mask_draw)
+                mask_full[np.array(mask) != 0] = i + 1
 
-        return img, masks
+            masks = [Image.fromarray(255 * np.array(mask_full == i, dtype=np.uint8)) for i in range(len(self.shapes) + 1)]
+
+            return img, masks
+        return img
 
 
 class Video(Frame):
 
     def __init__(
         self,
-        res: tuple[int, int],
+        resolution: tuple[int, int],
         background_color: str,
         shapes: list[Shape],
-        n_frames: int = 1000,
+        masks: bool = False,
+        n_frames: int = 100,
     ) -> None:
-        super().__init__(res, background_color, shapes)
+        super().__init__(resolution, background_color, shapes, masks)
         self.n_frames = n_frames
         self.velocities = np.random.uniform(-5, 5, (len(self.shapes), 2))
 

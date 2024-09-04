@@ -1,8 +1,15 @@
-from typing import Optional, Callable, Tuple, Union
+import os
+import re
+from collections import defaultdict
+from typing import Optional, Callable, Tuple, Union, Any, Literal
 from pathlib import Path
 
 import torch
+import torch.nn.functional as F
+from overrides import overrides
 from torchvision.datasets import VisionDataset
+from torchvision.datasets.folder import default_loader, ImageFolder, find_classes, make_dataset
+from torchvision.io import read_video
 
 
 class NextFrameDataset:
@@ -34,5 +41,24 @@ class VideoMDSpritesDataset(VisionDataset):
         root: Union[Path, str],
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-    ):
+        train: bool = True,
+        download: bool = False,
+    ) -> None:
         super().__init__(root, transform, target_transform)
+
+        extensions = ("avi",)
+        #self.fold = fold
+        self.train = train
+
+        if download:
+            pass
+        self.classes, class_to_idx = find_classes(self.root)
+        self.samples = make_dataset(self.root, class_to_idx, extensions, is_valid_file=None)
+
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, idx: int) -> Any:
+        video_path, label = self.samples[idx]
+        return read_video(video_path), label
