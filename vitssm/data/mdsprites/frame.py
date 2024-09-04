@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -8,7 +8,7 @@ from .shapes import Shape
 
 
 class Frame:
-    def __init__(
+    def __init__( # type: ignore
         self,
         size: tuple[int, int],
         background_color: str,
@@ -25,6 +25,7 @@ class Frame:
         img = Image.fromarray(np.full((self.h, self.w, 3), self.background_color, dtype=np.uint8))
         draw = ImageDraw.Draw(img)
 
+        masks = []
         if self.masks:
             mask_full = np.zeros((self.h, self.w), dtype=np.uint8)
             for i, shape in enumerate(self.shapes):
@@ -36,13 +37,11 @@ class Frame:
                 mask_full[np.array(mask) != 0] = i + 1
 
             masks = [Image.fromarray(255 * np.array(mask_full == i, dtype=np.uint8)) for i in range(len(self.shapes) + 1)]
-
-            return img, masks
-        return img
+            
+        return img, masks
 
 
 class Video(Frame):
-
     def __init__(
         self,
         resolution: tuple[int, int],
@@ -57,7 +56,7 @@ class Video(Frame):
 
     def make(self):
         frames, masks = [], [[] for _ in range(len(self.shapes))]
-        for i, frame in enumerate(range(self.n_frames)):
+        for _ in range(self.n_frames):
             for j, shape in enumerate(self.shapes):
                 shape.position += self.velocities[j]
                 if (shape.position[0] > self.h - shape.size[0]) or (shape.position[0] < 0 + shape.size[0]):
@@ -67,7 +66,8 @@ class Video(Frame):
             res = self.draw()
             frames.append(np.array(res[0]))
 
-            for j in range(len(self.shapes)):
-                masks[j].append(np.array(res[1][j]))
+            if self.masks:
+                for j in range(len(self.shapes)):
+                    masks[j].append(np.array(res[1][j]))
 
-        return frames, masks
+        return np.stack(frames, axis=0), np.stack(masks, axis=0)

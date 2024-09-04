@@ -1,14 +1,9 @@
-import os
-import re
-from collections import defaultdict
-from typing import Optional, Callable, Tuple, Union, Any, Literal
+from typing import Optional, Callable, Tuple, Union, Any
 from pathlib import Path
 
 import torch
-import torch.nn.functional as F
-from overrides import overrides
 from torchvision.datasets import VisionDataset
-from torchvision.datasets.folder import default_loader, ImageFolder, find_classes, make_dataset
+from torchvision.datasets.folder import find_classes, make_dataset
 from torchvision.io import read_video
 
 
@@ -39,9 +34,9 @@ class VideoMDSpritesDataset(VisionDataset):
     def __init__(
         self,
         root: Union[Path, str],
+        train: bool = True,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        train: bool = True,
         download: bool = False,
     ) -> None:
         super().__init__(root, transform, target_transform)

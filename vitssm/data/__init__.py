@@ -71,7 +71,11 @@ def build_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
             )
 
         case "vmdsprites":
-            pass
+            return VideoMDSpritesDataset(
+                root=data_root / "VMDsprites",
+                train=config.dataset.get("mode", "train") == "train",
+                transform=build_transforms(config),
+            )
 
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")

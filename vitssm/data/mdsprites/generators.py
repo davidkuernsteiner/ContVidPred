@@ -4,11 +4,15 @@ import numpy as np
 
 from .frame import Frame, Video
 from .shapes import ShapeConfig
-from PIL.ImageColor import getcolor
 
 
 def generate_images(
-    img_size, shapes: list, n_shapes: Union[int, tuple[int, int]], colors: list, background: str, n_images: int
+    img_size: int,
+    shapes: list,
+    n_shapes: Union[int, tuple[int, int]],
+    colors: list,
+    background: str,
+    n_images: int
 ) -> Generator:
 
     for _ in range(n_images):

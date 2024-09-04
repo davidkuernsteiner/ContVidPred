@@ -10,7 +10,7 @@ experiment:
   checkpoint_path: "checkpoints"
 
 dataset:
-  root: "data"
+  root: "data_store"
   name: "ucf101"
   mode: "train"
   frames_per_clip: 150
