@@ -7,7 +7,7 @@ from vitssm.models import build_model
 from vitssm.engine.tasks import ActionRecognitionEngine
 
 
-def load_config(file_path):
+def load_config(file_path: Union[str, Path]) -> Dict:
     with open(file_path, 'r') as file:
         return json.load(file)
 
@@ -24,7 +24,7 @@ def get_configs(
     return config
 
 
-def launch_job(config):
+def launch_job(config: DictConfig):
     model = build_model(config)
     engine = ActionRecognitionEngine(model, config)
     engine.train()
