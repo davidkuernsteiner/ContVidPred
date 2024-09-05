@@ -2,6 +2,7 @@ from typing import Union
 
 import numpy as np
 from PIL import Image, ImageDraw
+from einops import rearrange
 from matplotlib.colors import to_rgb
 
 from .shapes import Shape
@@ -70,4 +71,5 @@ class Video(Frame):
                 for j in range(len(self.shapes)):
                     masks[j].append(np.array(res[1][j]))
 
-        return np.stack(frames, axis=0), np.stack(masks, axis=0)
+        return (np.stack(frames, axis=0),
+                rearrange(np.stack(masks, axis=0), "b h w c -> b c h w"))

@@ -31,7 +31,7 @@ def generate_images(
 
 def generate_videos(
     resolution: int,
-    masks: bool,
+    generate_masks: bool,
     shapes: list,
     n_shapes: Union[int, tuple[int, int]],
     colors: list,
@@ -50,4 +50,4 @@ def generate_videos(
             for shape, color, pos, size in zip(shapes_, colors_, positions, sizes)
         ]
 
-        yield Video((resolution, resolution), background, shapes_, video_length).make()
+        yield Video((resolution, resolution), background, shapes_, generate_masks, video_length).make()
