@@ -1,0 +1,165 @@
+{
+    "os": "Linux-5.15.153.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "python": "3.12.0",
+    "heartbeatAt": "2024-09-06T11:40:42.960875",
+    "startedAt": "2024-09-06T11:40:42.379893",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "launch-agent",
+        "-e",
+        "davidkuernsteiner",
+        "-q",
+        "ML"
+    ],
+    "state": "running",
+    "host": "HPOMEN",
+    "username": "david",
+    "executable": "/home/david/micromamba/envs/ViTSSM/bin/python",
+    "cpu_count": 12,
+    "cpu_count_logical": 24,
+    "cpu_freq": {
+        "current": 4691.068,
+        "min": 0.0,
+        "max": 0.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 4691.068,
+            "min": 0.0,
+            "max": 0.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 1006.853931427002,
+            "used": 50.96689987182617
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 4090",
+            "memory_total": 25757220864
+        }
+    ],
+    "memory": {
+        "total": 30.872573852539062
+    }
+}

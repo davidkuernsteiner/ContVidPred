@@ -6,7 +6,6 @@ from torch import nn
 from . import ModelEngine
 
 
-
 class ActionRecognitionEngine(ModelEngine):
 
     def __init__(self, model: nn.Module, config: DictConfig):

@@ -13,6 +13,7 @@ RUN pip install --pre -U xformers
 
 COPY --chown=$MAMBA_USER vitssm ./vitssm
 COPY --chown=$MAMBA_USER run_configs ./run_configs
+COPY --chown=$MAMBA_USER data_store ./data_store
 COPY --chown=$MAMBA_USER execute_job.py ./execute_job.py
 
 ENV PATH="$PATH:/opt/conda/bin"

@@ -17,7 +17,6 @@ from ..utils.metrics import get_metric_collection
 wandb.login()
 
 
-
 class ModelEngine:
 
     def __init__(self, model: nn.Module, config: DictConfig) -> None:
