@@ -162,9 +162,12 @@ cython_debug/
 #VSCode
 .vscode/
 
+#wandb
+wandb/
+
 # Local directories
-data_store
-checkpoints
+data_store/
+checkpoints/
 
 # Node modules
 node_modules
