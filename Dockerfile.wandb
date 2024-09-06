@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5.7 as build
+FROM mambaorg/micromamba:1.5.7 AS build
 
 USER root
 
@@ -13,7 +13,7 @@ RUN pip install --pre -U xformers
 
 COPY --chown=$MAMBA_USER vitssm ./vitssm
 COPY --chown=$MAMBA_USER run_configs ./run_configs
-COPY --chown=$MAMBA_USER data_store ./data_store
+#COPY --chown=$MAMBA_USER data_store ./data_store
 COPY --chown=$MAMBA_USER scripts/ ./scripts
 
 ENV PATH="$PATH:/opt/conda/bin"
