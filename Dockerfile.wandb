@@ -6,7 +6,7 @@ USER $MAMBA_USER
 ARG PATH="$PATH:/opt/conda/bin"
 WORKDIR /home/$MAMBA_USER
 
-COPY env.linux.lock.yml  .
+COPY env.yml  .
 
 RUN micromamba install -n base --file env.yml --yes
 RUN pip install --pre -U xformers
