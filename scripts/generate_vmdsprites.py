@@ -1,7 +1,10 @@
 import argparse
 import os
+import random
+import shutil
 from pathlib import Path
 from tqdm import tqdm
+from datetime import datetime
 
 from PIL import ImageColor
 from torchvision.io import write_video
@@ -9,7 +12,18 @@ from torchvision.io import write_video
 from vitssm.data.mdsprites.generators import generate_videos
 from vitssm.data.mdsprites.shapes import Circle, Rectangle, Triangle
 
+def split_list(lst: list, percentage: float) -> tuple[list, list]:
+    # Shuffle the list to randomize order
+    random.shuffle(lst)
+    
+    # Calculate split index
+    split_index = int(len(lst) * percentage)
 
+    # Split the list
+    part1 = lst[:split_index]
+    part2 = lst[split_index:]
+
+    return part1, part2
 
 def main(
     output_dir: str,
@@ -18,9 +32,19 @@ def main(
     n_shapes: int,
     n_videos: int,
     video_length: int,
-    background: str
+    background: str,
+    exist_ok: bool,
+    n_folds: int = 5,
+    train_ratio: float = 0.8,
 ) -> None:
-    data_folder = Path(output_dir, "VMDsprites")
+    
+    if exist_ok:
+        data_folder = Path(output_dir) / f"VMDsprites_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    else:
+        data_folder = Path(output_dir) / "VMDsprites"
+        if data_folder.exists():
+            shutil.rmtree(data_folder)
+        
     os.makedirs(data_folder / "videos", exist_ok=True)
     os.makedirs(data_folder / "masks", exist_ok=True)
 
@@ -32,24 +56,39 @@ def main(
         resolution=resolution,
         generate_masks=generate_masks,
         shapes=[Circle, Rectangle, Triangle],
-        n_shapes=n_shapes,
+        n_shapes=(1, n_shapes),
         colors=list(object_colors.keys()),
         background=background,
         video_length=video_length,
     ))
 
+    video_paths = []
     for i in tqdm(
         range(n_videos),
         desc="Generating videos",
         total=n_videos,
     ):
         video, masks = next(video_generator)
-
-        write_video(data_folder / "videos" / f"video_{i}.avi", video, fps=10)
+        video_path = data_folder / "videos" / f"video_{i}.avi"
+        
+        write_video(video_path, video, fps=10)
+        video_paths.append(video_path)
+        
         if generate_masks:
             for j, mask in enumerate(masks):
-                os.makedirs(data_folder / "masks" / f"{i}", exist_ok=True)
-                write_video(data_folder / "masks" / f"video_{i}_mask_{j}.avi", mask, fps=10)
+                mask_dir = data_folder / "masks" / f"{i}"
+                os.makedirs(mask_dir, exist_ok=True)
+                write_video(mask_dir / f"video_{i}_mask_{j}.avi", mask, fps=10)
+    
+    fold_dir = data_folder / "folds"
+    os.makedirs(fold_dir, exist_ok=True)
+    for fold_idx in range(n_folds):
+        train_spilt, test_split = split_list(video_paths, train_ratio)
+        
+        with open(fold_dir / f"train_{fold_idx}.txt", "w") as f:
+            f.write("\n".join([str(p) for p in train_spilt]))
+        with open(fold_dir / f"test_{fold_idx}.txt", "w") as f:
+            f.write("\n".join([str(p) for p in test_split]))       
 
 
 if __name__ == "__main__":
@@ -58,10 +97,13 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", help="Output directory", required=True, type=str)
     parser.add_argument("-m", "--masks", help="Whether to generate masks", action="store_true")
     parser.add_argument("--resolution", help="Resolution of the video", default=64, type=int)
-    parser.add_argument("--n_shapes", help="Maximum number of shapes", default=3, type=int)
+    parser.add_argument("--n_shapes", help="Maximum number of shapes", default=4, type=int)
     parser.add_argument("--n_videos", help="Number of videos to generate", default=100, type=int)
     parser.add_argument("--video_length", help="Length of the video", default=100, type=int)
     parser.add_argument("--background", help="Background color", default="black", type=str)
+    parser.add_argument("--exist_ok", help="Allow multiple VMDsprites datasets", action="store_true")
+    parser.add_argument("--n_folds", help="Number of folds", default=5, type=int)
+    parser.add_argument("--train_ratio", help="Train ratio", default=0.8, type=float)
 
     args = parser.parse_args()
 
@@ -72,5 +114,8 @@ if __name__ == "__main__":
         n_shapes=args.n_shapes,
         n_videos=args.n_videos,
         video_length=args.video_length,
-        background=args.background
+        background=args.background,
+        exist_ok=args.exist_ok,
+        n_folds=args.n_folds,
+        train_ratio=args.train_ratio,
     )

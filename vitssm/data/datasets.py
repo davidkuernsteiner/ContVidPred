@@ -1,9 +1,8 @@
-from typing import Optional, Callable, Tuple, Union, Any
+from typing import Literal, Optional, Callable, Tuple, Union, Any
 from pathlib import Path
 
 import torch
 from torchvision.datasets import VisionDataset
-from torchvision.datasets.folder import find_classes, make_dataset
 from torchvision.io import read_video
 
 
@@ -35,25 +34,29 @@ class VideoMDSpritesDataset(VisionDataset):
         self,
         root: Union[Path, str],
         train: bool = True,
+        fold: int = 0,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
-        download: bool = False,
+        output_format: Literal["TCWH", "THWC"] = "THWC",
     ) -> None:
         super().__init__(root, transform, target_transform)
 
-        extensions = ("avi",)
-        #self.fold = fold
         self.train = train
+        self.fold = fold
+        self.output_format = output_format
 
-        if download:
-            pass
-        self.classes, class_to_idx = find_classes(self.root)
-        self.samples = make_dataset(self.root, class_to_idx, extensions, is_valid_file=None)
-
+        folds_path = Path(root, "folds")
+        folds_path = folds_path / f"train_{fold}.txt" if train else folds_path / f"test_{fold}.txt"
+        with open(folds_path, "r") as f:
+            self.samples = f.read().splitlines()
 
     def __len__(self) -> int:
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> Any:
-        video_path, label = self.samples[idx]
-        return read_video(video_path), label
+        video_path = self.samples[idx]
+        return read_video(
+            video_path,
+            pts_unit="sec",
+            output_format=self.output_format,
+        )[0]

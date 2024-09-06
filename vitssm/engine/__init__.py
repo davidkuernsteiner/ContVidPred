@@ -3,21 +3,25 @@ import os
 from datetime import datetime
 
 import torch
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LRScheduler
+from torch.utils.data import DataLoader
 import wandb
 from omegaconf.dictconfig import DictConfig
-from torch import nn
+from torch import Tensor, nn
 from tqdm import tqdm
 
-from ..data import build_dataloaders
 from ..utils import set_seeds
-from ..utils.metrics import build_metric_collection
+from ..utils.metrics import get_metric_collection
 
 wandb.login()
+
 
 
 class ModelEngine:
 
     def __init__(self, model: nn.Module, config: DictConfig) -> None:
+        super().__init__()
         self.config = config
         self.seed = config.experiment.get("seed", 42)
         set_seeds(self.seed)
@@ -26,25 +30,23 @@ class ModelEngine:
         self.use_amp = config.model.get("use_amp", False)
 
         self.model = model.to(self.device)
-        self.optimizer = build_optimizer(model, config)
+        self.optimizer = get_optimizer(model, config)
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
         if config.optimization.get("scheduler", None) is not None:
-            self.scheduler = build_scheduler(self.optimizer, config)
+            self.scheduler = get_scheduler(self.optimizer, config)
             self.scheduler_step_on_batch = config.optimization.scheduler.get("step_on_batch", False)
 
         else:
             self.scheduler = None
             self.scheduler_step_on_batch = False
 
-        self.criterion = build_loss(config)
-        self.metrics = build_metric_collection(config)
-
-        self.train_loader, self.eval_loader = build_dataloaders(config)
+        self.criterion = get_loss(config)
+        self.metrics = get_metric_collection(config)
 
         self.run = None
         self.state = {"step": 0, "epoch": 0}
 
-    def train(self) -> None:
+    def train(self, train_dataloader: DataLoader, eval_dataloader: DataLoader) -> None:
         self.run = wandb.init(
             config=dict(self.config),
             project=self.config.experiment.wandb.project,
@@ -65,7 +67,7 @@ class ModelEngine:
             self.state["epoch"] += 1
 
             self.model.train()
-            for x, y in tqdm(self.train_loader, total=len(self.train_loader), desc=f"Epoch {self.state["epoch"]}"):
+            for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state["epoch"]}"):
                 loss, _ = self._train_step(x, y)
                 self.state["step"] += 1
 
@@ -80,8 +82,8 @@ class ModelEngine:
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
 
             self.model.eval()
-            for x, y in self.eval_loader:
-                batch_eval_metrics, preds = self._eval_step(x, y)
+            for x, y in eval_dataloader:
+                _, _ = self._eval_step(x, y)
 
             self._log_eval(self.state["epoch"], self.state["step"], self.metrics.compute())
 
@@ -104,10 +106,10 @@ class ModelEngine:
 
         self._resume_checkpoint()
 
-    def _train_step(self, _x, _y) -> float:
+    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
         raise NotImplementedError
 
-    def _eval_step(self, _x, _y) -> float:
+    def _eval_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
         raise NotImplementedError
 
     @staticmethod
@@ -155,7 +157,7 @@ class ModelEngine:
         raise NotImplementedError
 
 
-def build_loss(
+def get_loss(
     config: DictConfig,
 ) -> torch.nn.Module:
     """Builds loss function."""
@@ -163,10 +165,10 @@ def build_loss(
     return loss
 
 
-def build_optimizer(
-    model,
+def get_optimizer(
+    model: nn.Module,
     config: DictConfig,
-) -> torch.optim.Optimizer:
+) -> Optimizer:
     """Builds optimizer."""
     optimizer = getattr(torch.optim, config.optimization.optimizer.name)(
         model.parameters(), **config.optimization.optimizer.kwargs
@@ -174,7 +176,7 @@ def build_optimizer(
     return optimizer
 
 
-def build_scheduler(optimizer, config: DictConfig) -> torch.optim.lr_scheduler.LRScheduler:
+def get_scheduler(optimizer: Optimizer, config: DictConfig) -> LRScheduler:
     """Builds learning rate scheduler."""
     if config.optimization.scheduler.name == "LambdaLR":
         warmup_steps = config.optimization.scheduler.kwargs.get("warmup_steps", 10000)

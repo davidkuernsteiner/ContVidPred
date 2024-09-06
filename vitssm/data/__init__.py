@@ -10,7 +10,7 @@ from torchvision.transforms.v2 import Compose, Resize, ToDtype, Normalize
 from .datasets import VideoMDSpritesDataset, NextFrameDataset
 
 
-def build_transforms(
+def get_transforms(
     config: DictConfig,
 ) -> Compose:
     """Builds image transformations."""
@@ -25,7 +25,7 @@ def build_transforms(
     return transform
 
 
-def build_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
+def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
     """Builds dataset given config."""
     data_root = Path(config.root_dir, config.dataset.get("root", "data"))
 
@@ -36,7 +36,7 @@ def build_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                     root=data_root,
                     split=config.dataset.get("mode", "train"),
                     download=True,
-                    transform=build_transforms(config),
+                    transform=get_transforms(config),
                 ),
             )
 
@@ -45,7 +45,7 @@ def build_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                 root=data_root / "kinetics",
                 split=config.dataset.get("mode", "train"),
                 download=True,
-                transform=build_transforms(config),
+                transform=get_transforms(config),
                 output_format="TCHW",
             )
 
@@ -56,7 +56,7 @@ def build_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                 frames_per_clip=config.dataset.get("frames_per_clip", 16),
                 step_between_clips=config.dataset.get("step_between_clips", 1),
                 train=config.dataset.get("mode", "train") == "train",
-                transform=build_transforms(config),
+                transform=get_transforms(config),
                 output_format="TCHW",
             )
 
@@ -66,26 +66,30 @@ def build_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                 annotation_path=data_root / "splits" / "testTrainMulti_7030_splits",
                 frames_per_clip=config.dataset.get("frames_per_clip", 16),
                 train=config.dataset.get("mode", "train") == "train",
-                transform=build_transforms(config),
+                transform=get_transforms(config),
                 output_format="TCHW",
             )
 
         case "vmdsprites":
-            return VideoMDSpritesDataset(
-                root=data_root / "VMDsprites",
-                train=config.dataset.get("mode", "train") == "train",
-                transform=build_transforms(config),
+            return NextFrameDataset(
+                VideoMDSpritesDataset(
+                    root=data_root / "VMDsprites",
+                    train=config.dataset.get("mode", "train") == "train",
+                    fold=config.dataset.get("fold", 0),
+                    transform=get_transforms(config),
+                ),
+                frame_offset=config.dataset.get("frame_offset", 1),
             )
 
         case _:
             raise ValueError(f"Unknown dataset: {config.dataset.name}")
 
 
-def build_dataloaders(
+def get_dataloaders(
     config: DictConfig,
 ) -> Union[DataLoader, Tuple[DataLoader, DataLoader]]:
     """Builds dataloaders for training and validation."""
-    dataset = build_dataset(config)
+    dataset = get_dataset(config)
 
     if config.dataset.mode == "train":
         train_set, val_set = random_split(

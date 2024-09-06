@@ -6,6 +6,8 @@ env:
 vars:
     PROJECT: ViTSSM
     LIBRARY: vitssm
+    DATA_DIR: data_store
+    CHECKPOINT_DIR: checkpoints
 
 tasks:
     print-os:

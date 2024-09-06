@@ -11,13 +11,11 @@ experiment:
 
 dataset:
   root: "data_store"
-  name: "ucf101"
+  name: "vmdsprites"
   mode: "train"
-  frames_per_clip: 150
-  step_between_clips: 150
   resolution: 64
   train_percentage: 0.90
-  num_workers: 12
+  num_workers: 8
   pin_memory: True
 
 optimization:
@@ -33,8 +31,8 @@ optimization:
     kwargs: {step_size: 1,
              gamma: 0.5}
   epochs: 10
-  batch_size: 256
-  val_batch_size: 1024
+  batch_size: 32
+  val_batch_size: 32
 
 metrics:
 

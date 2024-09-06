@@ -7,12 +7,7 @@ from .shapes import ShapeConfig
 
 
 def generate_images(
-    img_size: int,
-    shapes: list,
-    n_shapes: Union[int, tuple[int, int]],
-    colors: list,
-    background: str,
-    n_images: int
+    img_size: int, shapes: list, n_shapes: Union[int, tuple[int, int]], colors: list, background: str, n_images: int
 ) -> Generator:
 
     for _ in range(n_images):
@@ -43,7 +38,7 @@ def generate_videos(
         n_ = n_shapes if isinstance(n_shapes, int) else np.random.randint(n_shapes[0], n_shapes[1] + 1)
         shapes_ = np.random.choice(shapes, n_)
         colors_ = np.random.choice(colors, n_)
-        positions = np.random.uniform(resolution * 0.1, resolution - resolution * 0.1, (n_, 2))
+        positions = np.random.uniform(resolution * 0.2, resolution - resolution * 0.2, (n_, 2))
         sizes = np.random.uniform(resolution * 0.1, resolution * 0.3, (n_, 2))
         shapes_ = [
             shape(ShapeConfig(color, pos, size, 0))

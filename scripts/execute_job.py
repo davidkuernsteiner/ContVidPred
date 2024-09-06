@@ -7,7 +7,8 @@ from vitssm.models import build_model
 from vitssm.engine.tasks import ActionRecognitionEngine
 
 
-def load_config(file_path: Union[str, Path]) -> Dict:
+
+def load_config(file_path: Union[str, Path]) -> DictConfig:
     with open(file_path, 'r') as file:
         return json.load(file)
 
@@ -31,15 +32,19 @@ def launch_job(config: DictConfig):
     engine.run.finish()
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Launch a job with merged configurations.')
-    parser.add_argument('bc', type=str, help='Path to the base configuration file')
-    parser.add_argument('rc', type=str, help='Path to the run configuration file')
-    args = parser.parse_args()
-
-    config = get_configs(args.bc, args.rc)
+def main(base_config_path: str, run_config_path: str):
+    config = get_configs(base_config_path, run_config_path)
     launch_job(config)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Launch a job with merged configurations.')
+    
+    parser.add_argument('bc', type=str, help='Path to the base configuration file')
+    parser.add_argument('rc', type=str, help='Path to the run configuration file')
+    args = parser.parse_args()
+
+    main(
+        base_config_path=args.bc,
+        run_config_path=args.rc,
+    )

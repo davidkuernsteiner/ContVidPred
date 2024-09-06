@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from PIL import ImageDraw
+from PIL.ImageDraw import ImageDraw
 
 
 @dataclass
@@ -14,6 +14,7 @@ class ShapeConfig:
 
 class Shape(ABC):
     def __init__(self, config: ShapeConfig) -> None:
+        super().__init__()
         self.position = config.position
         self.size = config.size
         self.rotation = config.rotation
