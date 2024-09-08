@@ -4,7 +4,7 @@ experiment:
   wandb:
     project: "ViTSSM"
     group: "ViT"
-    name: "ucf101"
+    name: "vmdsprites"
 
   log_freq: 25
   checkpoint_path: "checkpoints"
