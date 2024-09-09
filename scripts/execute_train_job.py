@@ -8,8 +8,8 @@ from typing import Union
 
 import wandb
 
-from ..vitssm.models import build_model
-from ..vitssm.engine.tasks import NextFrameEngine
+from vitssm.models import build_model
+from vitssm.engine.tasks import NextFrameEngine
 
 load_dotenv()
 

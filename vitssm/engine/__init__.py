@@ -1,14 +1,13 @@
 import gc
 import os
 from datetime import datetime
-from typing import Union
+from typing import Any, Union
 
 import torch
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 import wandb
-from wandb import Run
 from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
 from tqdm import tqdm
@@ -20,11 +19,10 @@ wandb.login()
 
 
 class ModelEngine:
-
-    def __init__(self, model: nn.Module, run_object: Union[DictConfig, Run]) -> None:
+    def __init__(self, model: nn.Module, run_object: Union[DictConfig, Any]) -> None:   #TODO fix wandb run type hint
         super().__init__()
         
-        if isinstance(run_object, Run):
+        if isinstance(run_object, Any):
             self.run = run_object
             self.config = DictConfig(self.run.config)
             
