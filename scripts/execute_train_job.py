@@ -22,10 +22,10 @@ def main():
     run = wandb.init(
         job_type="train",
         entity=os.environ["WANDB_ENTITY"],
-        project=base_config.experiment.project,
-        group=base_config.experiment.group,
-        name=base_config.experiment.name,
-        id=base_config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+        project=base_config.experiment_project,
+        group=base_config.experiment_group,
+        name=base_config.experiment_name,
+        id=base_config.experiment_name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
         config=base_config,
         resume="allow",
     )
