@@ -10,12 +10,14 @@ import wandb
 
 from vitssm.models import build_model
 from vitssm.engine.tasks import NextFrameEngine
+from vitssm.utils import flatten_config
 
 load_dotenv()
 
 
 def main():
     base_config = OmegaConf.load(Path(os.environ['CONFIG_DIR']) / "base_config.yml")
+    base_config = flatten_config(base_config)
     
     run = wandb.init(
         job_type="train",
