@@ -27,17 +27,16 @@ class ModelEngine:
         if isinstance(run_object, Run):
             self.run = run_object
             self.config = DictConfig(self.run.config)
-            self._resume_checkpoint()
             
         elif isinstance(run_object, DictConfig):
             self.config = run_object
             self.run = wandb.init(
             config=dict(self.config),
-            project=self.config.experiment.wandb.project,
-            group=self.config.experiment.wandb.group,
-            name=self.config.experiment.wandb.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-            id=self.config.experiment.wandb.id,
-            resume="allow",
+            project=self.config.experiment.project,
+            group=self.config.experiment.group,
+            name=self.config.experiment.name,
+            id=self.config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+            resume="never",
         )
             
         else:
@@ -133,7 +132,7 @@ class ModelEngine:
 
     def _save_checkpoint(self) -> None:
         save_dir = os.path.join(
-            self.config.experiment.get("checkpoint_path", "checkpoints"),
+            os.environ["CHECKPOINT_DIR"],
             self.run.project,
             self.run.group,
         )
@@ -152,7 +151,7 @@ class ModelEngine:
 
     def _resume_checkpoint(self) -> None:
         checkpoint_path = os.path.join(
-            self.config.experiment.get("checkpoint_path", "checkpoints"),
+            os.environ["CHECKPOINT_DIR"],
             self.run.project,
             self.run.group,
             self.run.name + ".pth",

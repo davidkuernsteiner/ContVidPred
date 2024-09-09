@@ -1,18 +1,13 @@
-root_dir: "./"
-
 experiment:
-  wandb:
-    project: "ViTSSM"
-    group: "ViT"
-    name: "vmdsprites"
-
+  project: "ViTSSM"
+  group: "ViT"
+  name: "vmdsprites"
   log_freq: 25
-  checkpoint_path: "checkpoints"
 
 dataset:
-  root: "data_store"
   name: "vmdsprites"
   mode: "train"
+  fold: "0"
   resolution: 64
   train_percentage: 0.90
   num_workers: 8
