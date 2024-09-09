@@ -1,6 +1,7 @@
 import gc
 import os
 from datetime import datetime
+from typing import Any, Union
 
 import torch
 from torch.optim import Optimizer
@@ -18,42 +19,50 @@ wandb.login()
 
 
 class ModelEngine:
-
-    def __init__(self, model: nn.Module, config: DictConfig) -> None:
+    def __init__(self, model: nn.Module, run_object: Union[DictConfig, Any]) -> None:   #TODO fix wandb run type hint
         super().__init__()
-        self.config = config
-        self.seed = config.experiment.get("seed", 42)
+        
+        if isinstance(run_object, Any):
+            self.run = run_object
+            self.config = DictConfig(self.run.config)
+            
+        elif isinstance(run_object, DictConfig):
+            self.config = run_object
+            self.run = wandb.init(
+            config=dict(self.config),
+            project=self.config.experiment.project,
+            group=self.config.experiment.group,
+            name=self.config.experiment.name,
+            id=self.config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+            resume="never",
+        )
+            
+        else:
+            raise ValueError("Invalid run_object type. Must be a DictConfig or a Run object.")
+        
+        self.seed = self.config.experiment.get("seed", 42)
         set_seeds(self.seed)
 
-        self.device = torch.device(config.model.get("device", "cpu"))
-        self.use_amp = config.model.get("use_amp", False)
+        self.device = torch.device(self.config.model.get("device", "cpu"))
+        self.use_amp = self.config.model.get("use_amp", False)
 
         self.model = model.to(self.device)
-        self.optimizer = get_optimizer(model, config)
+        self.optimizer = get_optimizer(model, self.config)
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
-        if config.optimization.get("scheduler", None) is not None:
-            self.scheduler = get_scheduler(self.optimizer, config)
-            self.scheduler_step_on_batch = config.optimization.scheduler.get("step_on_batch", False)
+        if self.config.optimization.get("scheduler", None) is not None:
+            self.scheduler = get_scheduler(self.optimizer, self.config)
+            self.scheduler_step_on_batch = self.config.optimization.scheduler.get("step_on_batch", False)
 
         else:
             self.scheduler = None
             self.scheduler_step_on_batch = False
 
-        self.criterion = get_loss(config)
-        self.metrics = get_metric_collection(config)
+        self.criterion = get_loss(self.config)
+        self.metrics = get_metric_collection(self.config)
 
-        self.run = None
         self.state = {"step": 0, "epoch": 0}
 
     def train(self, train_dataloader: DataLoader, eval_dataloader: DataLoader) -> None:
-        self.run = wandb.init(
-            config=dict(self.config),
-            project=self.config.experiment.wandb.project,
-            group=self.config.experiment.wandb.group,
-            name=self.config.experiment.wandb.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-            id=self.config.experiment.wandb.id,
-            resume="allow",
-        )
         wandb.watch(
             self.model,
             self.criterion,
@@ -121,7 +130,7 @@ class ModelEngine:
 
     def _save_checkpoint(self) -> None:
         save_dir = os.path.join(
-            self.config.experiment.get("checkpoint_path", "checkpoints"),
+            os.environ["CHECKPOINT_DIR"],
             self.run.project,
             self.run.group,
         )
@@ -140,7 +149,7 @@ class ModelEngine:
 
     def _resume_checkpoint(self) -> None:
         checkpoint_path = os.path.join(
-            self.config.experiment.get("checkpoint_path", "checkpoints"),
+            os.environ["CHECKPOINT_DIR"],
             self.run.project,
             self.run.group,
             self.run.name + ".pth",

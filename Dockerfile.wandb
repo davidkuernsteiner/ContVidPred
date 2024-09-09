@@ -2,19 +2,24 @@ FROM mambaorg/micromamba:1.5.7 AS build
 
 USER root
 
-USER $MAMBA_USER
+USER ${MAMBA_USER}
 ARG PATH="$PATH:/opt/conda/bin"
-WORKDIR /home/$MAMBA_USER
+WORKDIR /home/${MAMBA_USER}
 
 COPY env.yml  .
 
 RUN micromamba install -n base --file env.yml --yes
 RUN pip install --pre -U xformers
 
-COPY --chown=$MAMBA_USER vitssm ./vitssm
-COPY --chown=$MAMBA_USER run_configs ./run_configs
-#COPY --chown=$MAMBA_USER data_store ./data_store
-COPY --chown=$MAMBA_USER scripts/ ./scripts
+COPY --chown=${MAMBA_USER} vitssm ./vitssm
+COPY --chown=${MAMBA_USER} configs ./configs
+COPY --chown=${MAMBA_USER} scripts/ ./scripts
+RUN mkdir -p /home/${MAMBA_USER}/data_store /home/${MAMBA_USER}/checkpoints
+RUN chown -R ${MAMBA_USER} /home/${MAMBA_USER}/data_store /home/${MAMBA_USER}/checkpoints
 
 ENV PATH="$PATH:/opt/conda/bin"
-ENV PYTHONPATH="/home/$MAMBA_USER/vitssm"
+ENV PYTHONPATH="/home/${MAMBA_USER}"
+ENV DATA_DIR="/home/${MAMBA_USER}/data_store"
+ENV CHECKPOINT_DIR="/home/${MAMBA_USER}/checkpoints"
+ENV CONFIG_DIR="/home/${MAMBA_USER}/configs"
+ENV WANDB_ENTITY="davidkuernsteiner"
