@@ -1,15 +1,13 @@
-from typing import Tuple
-from einops import rearrange
 from math import sqrt
 
 import torch
-from torch import nn
 import torch.nn.functional as F
-from torch import Tensor
-from xformers.components.multi_head_dispatch import MultiHeadDispatch
+from einops import rearrange
+from torch import Tensor, nn
+from xformers.components.activations import Activation
 from xformers.components.attention import ScaledDotProduct
 from xformers.components.feedforward import MLP
-from xformers.components.activations import Activation
+from xformers.components.multi_head_dispatch import MultiHeadDispatch
 
 
 class LearnablePositionalEncoding(nn.Module):
@@ -23,8 +21,7 @@ class LearnablePositionalEncoding(nn.Module):
         self.latent_dim = latent_dim
 
     def forward(self, x: Tensor):
-        """
-        Input dims: [batch, token, latent]
+        """Input dims: [batch, token, latent]
         Output dims: [batch, token, latent]
         """
         _, t, _ = x.shape
@@ -93,7 +90,7 @@ class MixedCrossAttentionBlock(nn.Module):
             hidden_layer_multiplier=mlp_multiplier,
         )
 
-    def forward(self, inputs: Tuple[Tensor, Tensor, Tensor]) -> Tuple[Tensor, Tensor, Tensor]:
+    def forward(self, inputs: tuple[Tensor, Tensor, Tensor]) -> tuple[Tensor, Tensor, Tensor]:
         x_query, x_kv1, x_kv2 = inputs
         print(x_query.shape, x_kv1.shape, x_kv2.shape)
         x_query = x_query + self.norm1(self.patch_attention(x_query, key=x_kv1, value=x_kv1))

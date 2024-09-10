@@ -1,6 +1,7 @@
-import torch
-import numpy as np
 import random
+
+import numpy as np
+import torch
 from omegaconf import DictConfig
 
 
@@ -10,8 +11,8 @@ def set_seeds(seed: int) -> None:
     np.random.seed(seed)
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
-    
-def flatten_config(config: DictConfig, parent_key: str = None, sep: str = '_'):
+
+def flatten_config(config: DictConfig, parent_key: str = None, sep: str = "_"):
     items = []
     for k, v in config.items():
         new_key = f"{parent_key}{sep}{k}" if parent_key else k

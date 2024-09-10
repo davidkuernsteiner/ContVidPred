@@ -1,10 +1,9 @@
-from typing import Union, Tuple
+from typing import Union
 
 import torch
 from einops import rearrange, repeat
 from timm.models.vision_transformer import VisionTransformer
-from torch import Tensor
-from torch import nn
+from torch import Tensor, nn
 from xformers.components.attention import LocalAttention
 from xformers.components.multi_head_dispatch import MultiHeadDispatch
 
@@ -14,8 +13,8 @@ from .modules import LearnablePositionalEncoding, MixedCrossAttentionBlock
 class LatentNextFramePrediction(nn.Module):
     def __init__(
         self,
-        frame_in_size: Tuple[int, int] = (224, 224),
-        frame_out_size: Tuple[int, int] = (224, 224),
+        frame_in_size: tuple[int, int] = (224, 224),
+        frame_out_size: tuple[int, int] = (224, 224),
         n_frames: int = 30,
         window_size: int = 10,
         patch_size: int = 16,
@@ -66,8 +65,7 @@ class LatentNextFramePrediction(nn.Module):
         self.latent_dim = latent_dim
 
     def forward(self, x: Tensor):
-        """
-        Input dims: [batch, time, height, width, channel]
+        """Input dims: [batch, time, height, width, channel]
         Output dims: [batch, time, height, width, channel]
         """
         b, t, h, w, c = x.shape
@@ -107,7 +105,7 @@ class LatentNextFramePrediction(nn.Module):
 class FrameEncoder(nn.Module):
     def __init__(
         self,
-        frame_in_size: Union[int, Tuple[int, int]] = 256,
+        frame_in_size: Union[int, tuple[int, int]] = 256,
         patch_size: int = 16,
         depth: int = 8,
         latent_dim: int = 64,
@@ -131,8 +129,7 @@ class FrameEncoder(nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
-        """
-        Input dims: [batch * time, channel, height, width]
+        """Input dims: [batch * time, channel, height, width]
         Output dims: [batch * time, latent]
         """
         return self.backbone(x)
@@ -152,7 +149,7 @@ class LatentPredictor(nn.Module):
 
         self.pos_enc = LearnablePositionalEncoding(n_tokens=n_frames, latent_dim=latent_dim)
         self.blocks = nn.Sequential(
-            *(MultiHeadDispatch(latent_dim, n_heads, attention_mechanism) for _ in range(n_blocks))
+            *(MultiHeadDispatch(latent_dim, n_heads, attention_mechanism) for _ in range(n_blocks)),
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -185,12 +182,11 @@ class LatentFrameDecoder(nn.Module):
                     mlp_multiplier=mlp_multiplier,
                 )
                 for _ in range(n_blocks)
-            )
+            ),
         )
 
     def forward(self, x_query: Tensor, x_patches: Tensor, x_latent: Tensor) -> Tensor:
-        """
-        Input dims:
+        """Input dims:
             x_query: [batch * time, height * width, latent]
             x_patches: [batch, time, height_patches, width_patches, latent]
             x_latent: [batch, time, latent]

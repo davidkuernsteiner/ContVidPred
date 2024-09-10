@@ -1,4 +1,5 @@
-from typing import Union, Generator
+from collections.abc import Generator
+from typing import Union
 
 import numpy as np
 
@@ -7,7 +8,7 @@ from .shapes import ShapeConfig
 
 
 def generate_images(
-    img_size: int, shapes: list, n_shapes: Union[int, tuple[int, int]], colors: list, background: str, n_images: int
+    img_size: int, shapes: list, n_shapes: Union[int, tuple[int, int]], colors: list, background: str, n_images: int,
 ) -> Generator:
 
     for _ in range(n_images):
@@ -18,7 +19,7 @@ def generate_images(
         sizes = np.round(np.random.uniform(img_size * 0.1, img_size * 0.3, (n_, 2))).astype(np.int32)
         shapes_ = [
             shape(ShapeConfig(color, pos, size, 0))
-            for shape, color, pos, size in zip(shapes_, colors_, positions, sizes)
+            for shape, color, pos, size in zip(shapes_, colors_, positions, sizes, strict=False)
         ]
 
         yield Frame((img_size, img_size), background, shapes_).draw()
@@ -42,7 +43,7 @@ def generate_videos(
         sizes = np.random.uniform(resolution * 0.1, resolution * 0.3, (n_, 2))
         shapes_ = [
             shape(ShapeConfig(color, pos, size, 0))
-            for shape, color, pos, size in zip(shapes_, colors_, positions, sizes)
+            for shape, color, pos, size in zip(shapes_, colors_, positions, sizes, strict=False)
         ]
 
         yield Video((resolution, resolution), background, shapes_, generate_masks, video_length).make()

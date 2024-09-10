@@ -1,13 +1,13 @@
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Tuple, Union
 
 import torch
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, random_split
-from torchvision.datasets import VisionDataset, MovingMNIST, Kinetics, UCF101, HMDB51
-from torchvision.transforms.v2 import Compose, Resize, ToDtype, Normalize
+from torchvision.datasets import HMDB51, UCF101, Kinetics, MovingMNIST, VisionDataset
+from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype
 
-from .datasets import VideoMDSpritesDataset, NextFrameDataset
+from .datasets import NextFrameDataset, VideoMDSpritesDataset
 
 
 def get_transforms(
@@ -19,7 +19,7 @@ def get_transforms(
             Resize(config.dataset.resolution),
             ToDtype(torch.float32, scale=True),
             Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
+        ],
     )
 
     return transform
@@ -87,13 +87,13 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
 
 def get_dataloaders(
     config: DictConfig,
-) -> Union[DataLoader, Tuple[DataLoader, DataLoader]]:
+) -> Union[DataLoader, tuple[DataLoader, DataLoader]]:
     """Builds dataloaders for training and validation."""
     dataset = get_dataset(config)
 
     if config.dataset.mode == "train":
         train_set, val_set = random_split(
-            dataset, [config.dataset.train_percentage, 1 - config.dataset.train_percentage]
+            dataset, [config.dataset.train_percentage, 1 - config.dataset.train_percentage],
         )
 
         train_loader = DataLoader(
@@ -113,11 +113,10 @@ def get_dataloaders(
 
         return train_loader, val_loader
 
-    else:
-        return DataLoader(
-            dataset,
-            batch_size=config.optimization.batch_size,
-            shuffle=False,
-            num_workers=config.get("num_workers", 1),
-            pin_memory=config.dataset.get("pin_memory", False),
-        )
+    return DataLoader(
+        dataset,
+        batch_size=config.optimization.batch_size,
+        shuffle=False,
+        num_workers=config.get("num_workers", 1),
+        pin_memory=config.dataset.get("pin_memory", False),
+    )

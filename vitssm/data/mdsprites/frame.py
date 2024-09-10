@@ -1,8 +1,8 @@
 from typing import Union
 
 import numpy as np
-from PIL import Image, ImageDraw
 from matplotlib.colors import to_rgb
+from PIL import Image, ImageDraw
 
 from .shapes import Shape
 

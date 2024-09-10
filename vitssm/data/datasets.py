@@ -1,12 +1,13 @@
-from typing import Literal, Optional, Callable, Tuple, Union, Any
-from pathlib import Path
 import os
+import zipfile
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, Literal, Optional, Union
 
+import gdown
 import torch
 from torchvision.datasets import VisionDataset
 from torchvision.io import read_video
-import gdown
-import zipfile
 
 
 class NextFrameDataset:
@@ -23,7 +24,7 @@ class NextFrameDataset:
 
         assert len(self.dataset[0]) > self.frame_offset, "Sample length should be greater than frame offset."
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         frames = self.dataset[index]
         return frames[: -self.frame_offset], frames[self.frame_offset :]
 
@@ -48,14 +49,14 @@ class VideoMDSpritesDataset(VisionDataset):
         self.train = train
         self.fold = fold
         self.output_format = output_format
-        
+
         if download and not Path(root).exists():
             self._download()
-            
+
 
         folds_path = Path(root, "folds")
         folds_path = folds_path / f"train_{fold}.txt" if train else folds_path / f"test_{fold}.txt"
-        with open(folds_path, "r") as f:
+        with open(folds_path) as f:
             self.samples = f.read().splitlines()
 
     def __len__(self) -> int:
@@ -68,7 +69,7 @@ class VideoMDSpritesDataset(VisionDataset):
             pts_unit="sec",
             output_format=self.output_format,
         )[0]
-        
+
     def _download(self) -> None:
         file_id = "1T7Vq7a70hu5949FJMe8yie5tvAwOmxXV"
         download_url = f"https://drive.google.com/uc?id={file_id}"
@@ -76,7 +77,7 @@ class VideoMDSpritesDataset(VisionDataset):
 
         gdown.download(download_url, output_path, quiet=False)
 
-        with zipfile.ZipFile(output_path, 'r') as zip_ref:
+        with zipfile.ZipFile(output_path, "r") as zip_ref:
             zip_ref.extractall(os.path.dirname(self.root))
-        
+
         os.remove(output_path)

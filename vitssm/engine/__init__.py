@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import Any, Union
 
 import torch
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LRScheduler
-from torch.utils.data import DataLoader
 import wandb
 from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LRScheduler
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from ..utils import set_seeds
@@ -21,11 +21,11 @@ wandb.login()
 class ModelEngine:
     def __init__(self, model: nn.Module, run_object: Union[DictConfig, Any]) -> None:   #TODO fix wandb run type hint
         super().__init__()
-        
+
         if isinstance(run_object, Any):
             self.run = run_object
             self.config = DictConfig(self.run.config)
-            
+
         elif isinstance(run_object, DictConfig):
             self.config = run_object
             self.run = wandb.init(
@@ -36,10 +36,10 @@ class ModelEngine:
             id=self.config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
             resume="never",
         )
-            
+
         else:
             raise ValueError("Invalid run_object type. Must be a DictConfig or a Run object.")
-        
+
         self.seed = self.config.experiment.get("seed", 42)
         set_seeds(self.seed)
 
@@ -85,7 +85,7 @@ class ModelEngine:
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
                     break
 
-                elif self.state["step"] % self.config.experiment.get("log_freq", 0) == 0:
+                if self.state["step"] % self.config.experiment.get("log_freq", 0) == 0:
                     train_metrics = {"loss": loss, "learning_rate": self.scheduler.get_last_lr()[-1]}
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
 
@@ -179,7 +179,7 @@ def get_optimizer(
 ) -> Optimizer:
     """Builds optimizer."""
     optimizer = getattr(torch.optim, config.optimization.optimizer.name)(
-        model.parameters(), **config.optimization.optimizer.kwargs
+        model.parameters(), **config.optimization.optimizer.kwargs,
     )
     return optimizer
 
@@ -197,10 +197,10 @@ def get_scheduler(optimizer: Optimizer, config: DictConfig) -> LRScheduler:
 
             return scheduler_gamma ** (step / decay_steps)
 
-        _scheduler = getattr(torch.optim.lr_scheduler, "LambdaLR")(optimizer, lr_lambda=warm_and_decay_lr_scheduler)
+        _scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warm_and_decay_lr_scheduler)
         return _scheduler
 
     _scheduler = getattr(torch.optim.lr_scheduler, config.optimization.scheduler.name)(
-        optimizer, **config.optimization.scheduler.kwargs
+        optimizer, **config.optimization.scheduler.kwargs,
     )
     return _scheduler

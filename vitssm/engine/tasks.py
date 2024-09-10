@@ -1,7 +1,6 @@
 import torch
 from omegaconf.dictconfig import DictConfig
-from torch import Tensor
-from torch import nn
+from torch import Tensor, nn
 
 from . import ModelEngine
 

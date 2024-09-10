@@ -31,9 +31,8 @@ exclude = '''
 line-length = 120
 lint.select = ["ALL"]
 extend-exclude = [
-    "ext/",
-    "run_configs/",
-    "data/",
+    "configs/",
+    "data_store/",
 ]
 force-exclude = true
 lint.ignore = [
