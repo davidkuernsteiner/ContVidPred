@@ -9,7 +9,7 @@ WORKDIR /home/${MAMBA_USER}
 COPY env.yml  .
 
 RUN micromamba install -n base --file env.yml --yes
-RUN pip install --pre -U xformers
+RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu121
 
 COPY --chown=${MAMBA_USER} vitssm ./vitssm
 COPY --chown=${MAMBA_USER} configs ./configs
