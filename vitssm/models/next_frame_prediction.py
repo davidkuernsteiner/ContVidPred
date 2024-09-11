@@ -1,4 +1,5 @@
 from typing import Union
+from pydantic import BaseModel
 
 import torch
 from einops import rearrange, repeat
@@ -10,38 +11,69 @@ from xformers.components.multi_head_dispatch import MultiHeadDispatch
 from .modules import LearnablePositionalEncoding, MixedCrossAttentionBlock
 
 
+class LatentNextFramePredictionConfig(BaseModel):
+    frame_in_size: tuple[int, int] = (64, 64)
+    frame_out_size: tuple[int, int] = (64, 64)
+    n_frames: int = 30
+    window_size: int = 10
+    patch_size: int = 4
+    latent_dim: int = 64
+    n_blocks_encoder: int = 4
+    n_heads_encoder: int = 1
+    n_blocks_latent_predictor: int = 4
+    n_heads_latent_predictor: int = 1
+    n_blocks_decoder: int = 4
+    n_heads_decoder: int = 1
+    mlp_multiplier: int = 2
+    pos_enc_dropout: float = 0.0
+    residual_dropout: float = 0.0
+    mlp_dropout: float = 0.0
+
+
 class LatentNextFramePrediction(nn.Module):
     def __init__(
         self,
-        frame_in_size: tuple[int, int] = (224, 224),
-        frame_out_size: tuple[int, int] = (224, 224),
+        frame_in_size: tuple[int, int] = (64, 64),
+        frame_out_size: tuple[int, int] = (64, 64),
         n_frames: int = 30,
         window_size: int = 10,
-        patch_size: int = 16,
-        latent_dim: int = 768,
-        n_heads: int = 8,
+        patch_size: int = 4,
+        latent_dim: int = 64,
+        n_blocks_encoder: int = 4,
+        n_heads_encoder: int = 1,
+        n_blocks_latent_predictor: int = 4,
+        n_heads_latent_predictor: int = 1,
+        n_blocks_decoder: int = 4,
+        n_heads_decoder: int = 1,
+        mlp_multiplier: int = 2,
         pos_enc_dropout: float = 0.0,
+        residual_dropout: float = 0.0,
+        mlp_dropout: float = 0.0,
+        
     ):
         super().__init__()
         self.frame_encoder = FrameEncoder(
             frame_in_size=frame_in_size,
             patch_size=patch_size,
             latent_dim=latent_dim,
+            n_blocks=n_blocks_encoder,
+            n_heads=n_heads_encoder,
+            mlp_ratio=mlp_multiplier,
         )
         self.latent_predictor = LatentPredictor(
             latent_dim=latent_dim,
-            n_heads=n_heads,
-            n_blocks=4,
+            n_heads=n_heads_latent_predictor,
+            n_blocks=n_blocks_latent_predictor,
             n_frames=n_frames,
             window_size=window_size,
         )
         self.latent_frame_decoder = LatentFrameDecoder(
-            n_blocks=4,
+            n_blocks=n_blocks_decoder,
             latent_dim=latent_dim,
-            n_heads=4,
-            residual_dropout=0.0,
-            mlp_dropout=0.0,
-            mlp_multiplier=2,
+            n_heads=n_heads_decoder,
+            residual_dropout=residual_dropout,
+            mlp_dropout=mlp_dropout,
+            mlp_multiplier=mlp_multiplier,
         )
 
         self.patchify = nn.Conv2d(
@@ -84,7 +116,7 @@ class LatentNextFramePrediction(nn.Module):
         x_next_latent = self.latent_predictor(x_latent)
         x_next_latent = repeat(x_next_latent, "b t e -> (b t) i e", i=1)
 
-        canvas = self.pos_enc_patches(torch.ones(b, hp_out * wp_out, self.latent_dim))
+        canvas = self.pos_enc_patches(torch.ones(b, hp_out * wp_out, self.latent_dim, dtype=x.dtype, device=x.device))
         canvas = repeat(canvas, "b (hp wp) e -> (b t) (hp wp) e", hp=hp_out, wp=wp_out, t=t)
         x_next_frame = self.latent_frame_decoder(canvas, x_patches, x_next_latent)
         x_next_frame = self.patch_token_decoder(x_next_frame)
@@ -105,21 +137,21 @@ class LatentNextFramePrediction(nn.Module):
 class FrameEncoder(nn.Module):
     def __init__(
         self,
-        frame_in_size: Union[int, tuple[int, int]] = 256,
-        patch_size: int = 16,
-        depth: int = 8,
+        frame_in_size: tuple[int, int] = (64, 64),
+        patch_size: int = 4,
         latent_dim: int = 64,
-        n_heads: int = 8,
-        mlp_ratio: float = 3.0,
+        n_blocks: int = 4,
+        n_heads: int = 1,
+        mlp_ratio: int = 2,
         qkv_bias: bool = False,
         norm_layer: nn.Module = nn.LayerNorm,
     ) -> None:
         super().__init__()
         self.backbone = VisionTransformer(
-            img_size=frame_in_size,
+            img_size=frame_in_size[0],
             patch_size=patch_size,
             embed_dim=latent_dim,
-            depth=depth,
+            depth=n_blocks,
             num_heads=n_heads,
             mlp_ratio=mlp_ratio,
             qkv_bias=qkv_bias,
@@ -138,10 +170,10 @@ class FrameEncoder(nn.Module):
 class LatentPredictor(nn.Module):
     def __init__(
         self,
-        latent_dim: int = 768,
-        n_heads: int = 8,
+        latent_dim: int = 64,
+        n_heads: int = 1,
         n_blocks: int = 4,
-        n_frames: int = 302,
+        n_frames: int = 30,
         window_size: int = 10,
     ) -> None:
         super().__init__()
@@ -163,12 +195,12 @@ class LatentPredictor(nn.Module):
 class LatentFrameDecoder(nn.Module):
     def __init__(
         self,
+        latent_dim: int = 64,
         n_blocks: int = 4,
-        latent_dim: int = 128,
-        n_heads: int = 4,
+        n_heads: int = 1,
+        mlp_multiplier: int = 2,
         residual_dropout: float = 0.0,
         mlp_dropout: float = 0.0,
-        mlp_multiplier: int = 2,
     ) -> None:
         super().__init__()
 

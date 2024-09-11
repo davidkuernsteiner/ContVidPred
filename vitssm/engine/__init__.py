@@ -5,6 +5,7 @@ from typing import Any, Union
 
 import torch
 import wandb
+from wandb.sdk.wandb_run import Run
 from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
 from torch.optim import Optimizer
@@ -19,10 +20,10 @@ wandb.login()
 
 
 class ModelEngine:
-    def __init__(self, model: nn.Module, run_object: Union[DictConfig, Any]) -> None:   #TODO fix wandb run type hint
+    def __init__(self, model: nn.Module, run_object: Union[Run, DictConfig]) -> None:   #TODO fix wandb run type hint
         super().__init__()
 
-        if isinstance(run_object, Any):
+        if isinstance(run_object, Run):
             self.run = run_object
             self.config = DictConfig(self.run.config)
 
@@ -43,8 +44,8 @@ class ModelEngine:
         self.seed = self.config.experiment.get("seed", 42)
         set_seeds(self.seed)
 
-        self.device = torch.device(self.config.model.get("device", "cpu"))
-        self.use_amp = self.config.model.get("use_amp", False)
+        self.device = torch.device(self.config.model.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
+        self.use_amp = self.config.model.get("use_amp", True)
 
         self.model = model.to(self.device)
         self.optimizer = get_optimizer(model, self.config)
@@ -58,7 +59,7 @@ class ModelEngine:
             self.scheduler_step_on_batch = False
 
         self.criterion = get_loss(self.config)
-        self.metrics = get_metric_collection(self.config)
+        self.metrics = get_metric_collection(self.config).to(self.device)
 
         self.state = {"step": 0, "epoch": 0}
 
@@ -76,7 +77,7 @@ class ModelEngine:
 
             self.model.train()
             for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state["epoch"]}"):
-                loss, _ = self._train_step(x, y)
+                loss, _ = self._train_step(x.to(self.device), y.to(self.device))
                 self.state["step"] += 1
 
                 if self.state["step"] == self.config.optimization.get("training_steps", 10000):
@@ -91,7 +92,7 @@ class ModelEngine:
 
             self.model.eval()
             for x, y in eval_dataloader:
-                _, _ = self._eval_step(x, y)
+                _, _ = self._eval_step(x.to(self.device), y.to(self.device))
 
             self._log_eval(self.state["epoch"], self.state["step"], self.metrics.compute())
 

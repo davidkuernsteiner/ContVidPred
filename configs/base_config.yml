@@ -10,7 +10,7 @@ dataset:
   fold: "0"
   resolution: 64
   train_percentage: 0.90
-  num_workers: 6
+  num_workers: 0
   pin_memory: True
 
 optimization:
@@ -30,7 +30,14 @@ optimization:
   val_batch_size: 32
 
 metrics:
+  MSE:
+    name: "MeanSquaredError"
+    kwargs: {}
 
 model:
+  name: "latent_nextframe_attention"
   device: "cuda"
   use_amp: True
+  frame_in_size: [64, 64]
+  latent_dim: 64
+  n_frames: 99

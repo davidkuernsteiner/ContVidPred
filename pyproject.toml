@@ -1,10 +1,18 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ViTSSM"
+version = "0.1.0"
+description = "codebase for my masters thesis project"
 requires-python = "==3.12"
 authors = [
     { name = "David Kuernsteiner", email = "david.kuernsteiner@gmail.com" }
 ]
-repository = "https://github.com/davidkuernsteiner/ViTSSM.git"
+
+[tool.setuptools]
+packages = ["vitssm"]
 
 [tool.black]
 # https://github.com/psf/black
