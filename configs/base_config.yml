@@ -10,7 +10,7 @@ dataset:
   fold: "0"
   resolution: 64
   train_percentage: 0.90
-  num_workers: 8
+  num_workers: 6
   pin_memory: True
 
 optimization:

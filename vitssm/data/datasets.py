@@ -4,10 +4,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
+from einops import rearrange
 import gdown
 import torch
 from torchvision.datasets import VisionDataset
 from torchvision.io import read_video
+from torchvision.tv_tensors import Video
 
 
 class NextFrameDataset:
@@ -41,10 +43,9 @@ class VideoMDSpritesDataset(VisionDataset):
         train: bool = True,
         fold: int = 0,
         transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
         output_format: Literal["TCWH", "THWC"] = "THWC",
     ) -> None:
-        super().__init__(root, transform, target_transform)
+        super().__init__(root, transform=transform)
 
         self.train = train
         self.fold = fold
@@ -64,16 +65,23 @@ class VideoMDSpritesDataset(VisionDataset):
 
     def __getitem__(self, idx: int) -> Any:
         video_path = self.samples[idx]
-        return read_video(
-            video_path,
-            pts_unit="sec",
-            output_format=self.output_format,
-        )[0]
+        video = Video(
+            read_video(
+                video_path,
+                pts_unit="sec",
+                output_format="TCHW",
+            )[0]
+        )
+        
+        if self.transform is not None:
+            video = self.transform(video)
+        
+        return rearrange(video, f"T C H W -> {" ".join(self.output_format)}")
 
     def _download(self) -> None:
         file_id = "1T7Vq7a70hu5949FJMe8yie5tvAwOmxXV"
         download_url = f"https://drive.google.com/uc?id={file_id}"
-        output_path = self.root + ".zip"
+        output_path = str(self.root) + ".zip"
 
         gdown.download(download_url, output_path, quiet=False)
 

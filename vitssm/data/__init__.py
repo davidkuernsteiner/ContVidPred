@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Tuple, Union
 
@@ -10,7 +11,7 @@ from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype
 from .datasets import NextFrameDataset, VideoMDSpritesDataset
 
 
-def get_transforms(
+def get_transform(
     config: DictConfig,
 ) -> Compose:
     """Builds image transformations."""
@@ -27,7 +28,7 @@ def get_transforms(
 
 def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
     """Builds dataset given config."""
-    data_root = Path(config.root_dir, config.dataset.get("root", "data"))
+    data_root = Path(os.environ["DATA_DIR"])
 
     match config.dataset.name:
         case "moving_mnist":
@@ -36,16 +37,17 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                     root=data_root,
                     split=config.dataset.get("mode", "train"),
                     download=True,
-                    transform=get_transforms(config),
+                    transform=get_transform(config),
                 ),
             )
 
         case "kinetics":
             return Kinetics(
                 root=data_root / "kinetics",
+                frames_per_clip=10,
                 split=config.dataset.get("mode", "train"),
                 download=True,
-                transform=get_transforms(config),
+                transform=get_transform(config),
                 output_format="TCHW",
             )
 
@@ -56,7 +58,7 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                 frames_per_clip=config.dataset.get("frames_per_clip", 16),
                 step_between_clips=config.dataset.get("step_between_clips", 1),
                 train=config.dataset.get("mode", "train") == "train",
-                transform=get_transforms(config),
+                transform=get_transform(config),
                 output_format="TCHW",
             )
 
@@ -66,7 +68,7 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                 annotation_path=data_root / "splits" / "testTrainMulti_7030_splits",
                 frames_per_clip=config.dataset.get("frames_per_clip", 16),
                 train=config.dataset.get("mode", "train") == "train",
-                transform=get_transforms(config),
+                transform=get_transform(config),
                 output_format="TCHW",
             )
 
@@ -76,7 +78,7 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                     root=data_root / "VMDsprites",
                     train=config.dataset.get("mode", "train") == "train",
                     fold=config.dataset.get("fold", 0),
-                    transform=get_transforms(config),
+                    transform=get_transform(config),
                 ),
                 frame_offset=config.dataset.get("frame_offset", 1),
             )
