@@ -1,8 +1,10 @@
-from typing import Any, Union
+from typing import Union
+
 import torch
 from omegaconf.dictconfig import DictConfig
-from wandb.sdk.wandb_run import Run
 from torch import Tensor, nn
+
+from wandb.sdk.wandb_run import Run
 
 from . import ModelEngine
 

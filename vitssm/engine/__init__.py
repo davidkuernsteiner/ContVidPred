@@ -4,14 +4,15 @@ from datetime import datetime
 from typing import Any, Union
 
 import torch
-import wandb
-from wandb.sdk.wandb_run import Run
 from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
+import wandb
+from wandb.sdk.wandb_run import Run
 
 from ..utils import set_seeds
 from ..utils.metrics import get_metric_collection

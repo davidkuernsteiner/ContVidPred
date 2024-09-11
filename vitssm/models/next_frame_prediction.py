@@ -1,8 +1,6 @@
-from typing import Union
-from pydantic import BaseModel
-
 import torch
 from einops import rearrange, repeat
+from pydantic import BaseModel
 from timm.models.vision_transformer import VisionTransformer
 from torch import Tensor, nn
 from xformers.components.attention import LocalAttention
@@ -49,7 +47,7 @@ class LatentNextFramePrediction(nn.Module):
         pos_enc_dropout: float = 0.0,
         residual_dropout: float = 0.0,
         mlp_dropout: float = 0.0,
-        
+
     ):
         super().__init__()
         self.frame_encoder = FrameEncoder(
@@ -185,8 +183,7 @@ class LatentPredictor(nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
-        """
-        Input dims: [batch, time, latent]
+        """Input dims: [batch, time, latent]
         Output dims: [batch, time, latent]
         """
         return self.blocks(self.pos_enc(x))

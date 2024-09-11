@@ -4,9 +4,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
-from einops import rearrange
 import gdown
 import torch
+from einops import rearrange
 from torchvision.datasets import VisionDataset
 from torchvision.io import read_video
 from torchvision.tv_tensors import Video
@@ -70,12 +70,12 @@ class VideoMDSpritesDataset(VisionDataset):
                 video_path,
                 pts_unit="sec",
                 output_format="TCHW",
-            )[0]
+            )[0],
         )
-        
+
         if self.transform is not None:
             video = self.transform(video)
-        
+
         return rearrange(video, f"T C H W -> {" ".join(self.output_format)}")
 
     def _download(self) -> None:

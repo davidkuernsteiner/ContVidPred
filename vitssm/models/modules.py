@@ -29,7 +29,7 @@ class LearnablePositionalEncoding(nn.Module):
             pos_enc = self.resample_pos_enc(t)
         else:
             pos_enc = self.pos_enc
-            
+
         pos_enc = pos_enc.to(x.device)
 
         return self.dropout(x + pos_enc)
