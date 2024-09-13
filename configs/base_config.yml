@@ -2,6 +2,7 @@ project: "ViTSSM"
 group: "ViT"
 name: "vmdsprites"
 log_freq: 25
+seed: 420
 
 dataset:
   name: "vmdsprites"

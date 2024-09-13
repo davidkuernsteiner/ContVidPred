@@ -21,27 +21,28 @@ wandb.login()
 
 
 class ModelEngine:
-    def __init__(self, model: nn.Module, run_object: Union[Run, DictConfig]) -> None:   #TODO fix wandb run type hint
+    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:   #TODO fix wandb run type hint
         super().__init__()
 
-        if isinstance(run_object, Run):
-            self.run = run_object
-            self.config = DictConfig(self.run.config)
+        #if isinstance(run_object, Run):
+        #    self.run = run_object
+        #    self.config = DictConfig(self.run.config)
+#
+        #elif isinstance(run_object, DictConfig):
+        #    self.config = run_object
+        #    self.run = wandb.init(
+        #    config=dict(self.config),
+        #    project=self.config.project,
+        #    group=self.config.group,
+        #    name=self.config.name,
+        #    id=self.config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+        #    resume="never",
+        #)
+#
+        #else:
+        #    raise ValueError("Invalid run_object type. Must be a DictConfig or a Run object.")
 
-        elif isinstance(run_object, DictConfig):
-            self.config = run_object
-            self.run = wandb.init(
-            config=dict(self.config),
-            project=self.config.project,
-            group=self.config.group,
-            name=self.config.name,
-            id=self.config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-            resume="never",
-        )
-
-        else:
-            raise ValueError("Invalid run_object type. Must be a DictConfig or a Run object.")
-
+        self.config = run_object
         self.seed = self.config.get("seed", 42)
         set_seeds(self.seed)
 

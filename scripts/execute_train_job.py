@@ -24,14 +24,12 @@ wandb.require("core")
 
 def main():
     
-    config_path = "../configs/base_config.yml"
-    launch.manage_config_file(config_path)
+    config_path = Path(os.environ["CONFIG_DIR"]) / "base_config.yml"
     
     with open(config_path, "r") as f:
         base_config = yaml.safe_load(f)
-    #base_config = OmegaConf.load(config_path)
     
-    run = wandb.init(
+    with wandb.init(
         job_type="train",
         entity=os.environ["WANDB_ENTITY"],
         #project=base_config.experiment.project,
@@ -40,15 +38,20 @@ def main():
         #id=base_config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
         config=base_config,
         resume="allow",
-    )
+    ):
+        launch.manage_wandb_config(
+        include=["dataset", "optimization", "metrics", "model"], 
+        exclude=["project", "log_freq", "seed"],
+        )
 
-    model = build_model(run.config)
-    engine = NextFrameEngine(model=model, run_object=run)
+    run_config = DictConfig(launch.load_wandb_config())
+    model = build_model(run_config)
+    engine = NextFrameEngine(model=model, run_object=run_config)
     
-    if run.resumed:
-        engine._resume_checkpoint()
+    #if wandb.run.resumed:
+    #    engine._resume_checkpoint()
     
-    train_loader, val_loader = get_dataloaders(run.config)
+    train_loader, val_loader = get_dataloaders(run_config)
     
     engine.train(train_loader, val_loader)
     engine.run.finish()
