@@ -18,7 +18,7 @@ dataset:
 optimization:
   loss:
     name: "MSELoss"
-    args: {}
+    kwargs: {}
   optimizer:
     name: "AdamW"
     kwargs: {lr: 0.001,
@@ -32,7 +32,6 @@ optimization:
 metrics:
   MSE:
     name: "MeanSquaredError"
-    kwargs: {}
 
 model:
   name: "latent_nextframe_attention"

@@ -4,5 +4,5 @@ from torchmetrics import MetricCollection
 
 
 def get_metric_collection(config: DictConfig) -> MetricCollection:
-    metrics = {name: getattr(torchmetrics, metric.name)(**metric.kwargs) for name, metric in config.metrics.items()}
+    metrics = {name: getattr(torchmetrics, metric.name)(**metric.get("kwargs", {})) for name, metric in config.metrics.items()}
     return MetricCollection(metrics)

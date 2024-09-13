@@ -172,7 +172,7 @@ def get_loss(
     config: DictConfig,
 ) -> torch.nn.Module:
     """Builds loss function."""
-    loss = getattr(torch.nn, config.optimization.loss.name)(**config.optimization.loss.args)
+    loss = getattr(torch.nn, config.optimization.loss.name)(**config.optimization.loss.get("kwargs", {}))
     return loss
 
 
@@ -182,7 +182,7 @@ def get_optimizer(
 ) -> Optimizer:
     """Builds optimizer."""
     optimizer = getattr(torch.optim, config.optimization.optimizer.name)(
-        model.parameters(), **config.optimization.optimizer.kwargs,
+        model.parameters(), **config.optimization.optimizer.get("kwargs", {}),
     )
     return optimizer
 
@@ -204,6 +204,6 @@ def get_scheduler(optimizer: Optimizer, config: DictConfig) -> LRScheduler:
         return _scheduler
 
     _scheduler = getattr(torch.optim.lr_scheduler, config.optimization.scheduler.name)(
-        optimizer, **config.optimization.scheduler.kwargs,
+        optimizer, **config.optimization.scheduler.get("kwargs", {}),
     )
     return _scheduler
