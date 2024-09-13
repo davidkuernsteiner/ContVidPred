@@ -24,7 +24,7 @@ wandb.require("core")
 
 def main():
     
-    config_path = Path("configs") / "base_config.yml"
+    config_path = "/configs/base_config.yml"
     launch.manage_config_file(config_path)
     
     with open(config_path, "r") as f:
