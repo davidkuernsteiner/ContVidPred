@@ -30,20 +30,17 @@ def main():
     
     with wandb.init(
         job_type="train",
-        entity=os.environ["WANDB_ENTITY"],
-        project=base_config.project,
         group=base_config.group,
         name=base_config.name,
-        id=base_config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
         config=dict(base_config),
         resume="allow",
-    ) as run:
+    ):
         launch.manage_wandb_config(
         include=["dataset", "optimization", "metrics", "model"], 
         exclude=["project", "log_freq", "seed"],
         )
 
-        run_config = DictConfig(run.config)
+        run_config = DictConfig(launch.load_wandb_config())
         model = build_model(run_config)
         engine = NextFrameEngine(model=model, run_object=run_config)
 
