@@ -32,10 +32,10 @@ def main():
     with wandb.init(
         job_type="train",
         entity=os.environ["WANDB_ENTITY"],
-        project=base_config.experiment.project,
-        group=base_config.experiment.group,
-        name=base_config.experiment.name,
-        id=base_config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+        project=base_config.project,
+        group=base_config.group,
+        name=base_config.name,
+        id=base_config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
         config=base_config,
         resume="allow",
     ) as run:
