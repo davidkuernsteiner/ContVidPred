@@ -26,8 +26,7 @@ def main():
     
     config_path = Path(os.environ["CONFIG_DIR"]) / "base_config.yml"
     
-    with open(config_path, "r") as f:
-        base_config = yaml.safe_load(f)
+    base_config = OmegaConf.load(config_path)
     
     with wandb.init(
         job_type="train",
@@ -36,7 +35,7 @@ def main():
         group=base_config.group,
         name=base_config.name,
         id=base_config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-        config=base_config,
+        config=dict(base_config),
         resume="allow",
     ) as run:
         launch.manage_wandb_config(
