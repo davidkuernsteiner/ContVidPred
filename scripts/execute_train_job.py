@@ -32,15 +32,16 @@ def main():
         job_type="train",
         group=base_config.group,
         name=base_config.name,
-        config=dict(base_config),
+        config=OmegaConf.to_container(base_config, resolve=True),
         resume="allow",
     ):
         launch.manage_wandb_config(
         include=["dataset", "optimization", "metrics", "model"], 
         exclude=["project", "log_freq", "seed"],
         )
-        print(launch.load_wandb_config())
-        run_config = DictConfig(launch.load_wandb_config())
+        
+        #print(wandb.config)
+        run_config = OmegaConf.create(dict(wandb.config))
         model = build_model(run_config)
         engine = NextFrameEngine(model=model, run_object=run_config)
 

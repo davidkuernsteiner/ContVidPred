@@ -100,14 +100,14 @@ def get_dataloaders(
 
         train_loader = DataLoader(
             train_set,
-            batch_size=config.optimization.batch_size,
+            batch_size=config.dataset.batch_size,
             shuffle=True,
             num_workers=config.dataset.get("num_workers", 1),
             pin_memory=config.dataset.get("pin_memory", False),
         )
         val_loader = DataLoader(
             val_set,
-            batch_size=config.optimization.get("val_batch_size", config.optimization.batch_size),
+            batch_size=config.dataset.get("val_batch_size", config.dataset.batch_size),
             shuffle=False,
             num_workers=config.dataset.get("num_workers", 1),
             pin_memory=config.dataset.get("pin_memory", False),
@@ -117,7 +117,7 @@ def get_dataloaders(
 
     return DataLoader(
         dataset,
-        batch_size=config.optimization.batch_size,
+        batch_size=config.dataset.batch_size,
         shuffle=False,
         num_workers=config.get("num_workers", 1),
         pin_memory=config.dataset.get("pin_memory", False),

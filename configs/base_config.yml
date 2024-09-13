@@ -1,13 +1,13 @@
-project: "ViTSSM"
-group: "ViT"
-name: "vmdsprites"
+project: 'ViTSSM'
+group: 'ViT'
+name: 'vmdsprites'
 log_freq: 25
 seed: 420
 
 dataset:
-  name: "vmdsprites"
-  mode: "train"
-  fold: "0"
+  name: 'vmdsprites'
+  mode: 'train'
+  fold: '0'
   resolution: 64
   train_percentage: 0.90
   num_workers: 0
@@ -17,25 +17,25 @@ dataset:
 
 optimization:
   loss:
-    name: "MSELoss"
+    name: 'MSELoss'
     kwargs: {}
   optimizer:
-    name: "AdamW"
+    name: 'AdamW'
     kwargs: {lr: 0.001,
              weight_decay: 0.01}
   scheduler:
-    name: "StepLR"
+    name: 'StepLR'
     kwargs: {step_size: 1,
              gamma: 0.5}
   epochs: 10
 
 metrics:
   MSE:
-    name: "MeanSquaredError"
+    name: 'MeanSquaredError'
 
 model:
-  name: "latent_nextframe_attention"
-  device: "cuda"
+  name: 'latent_nextframe_attention'
+  device: 'cuda'
   use_amp: True
   frame_in_size: [64, 64]
   latent_dim: 64
