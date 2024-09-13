@@ -39,7 +39,7 @@ def main():
         include=["dataset", "optimization", "metrics", "model"], 
         exclude=["project", "log_freq", "seed"],
         )
-
+        print(launch.load_wandb_config())
         run_config = DictConfig(launch.load_wandb_config())
         model = build_model(run_config)
         engine = NextFrameEngine(model=model, run_object=run_config)
