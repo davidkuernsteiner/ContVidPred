@@ -1,8 +1,7 @@
-experiment:
-  project: "ViTSSM"
-  group: "ViT"
-  name: "vmdsprites"
-  log_freq: 25
+project: "ViTSSM"
+group: "ViT"
+name: "vmdsprites"
+log_freq: 25
 
 dataset:
   name: "vmdsprites"

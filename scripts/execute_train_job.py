@@ -1,5 +1,6 @@
 import os
 import argparse
+import yaml
 from datetime import datetime
 from dotenv import load_dotenv
 from omegaconf import OmegaConf, DictConfig
@@ -25,16 +26,19 @@ def main():
     
     config_path = Path(os.environ['CONFIG_DIR']) / "base_config.yml"
     launch.manage_config_file(config_path)
-    base_config = OmegaConf.load(config_path)
+    
+    with open(config_path, "r") as f:
+        base_config = yaml.safe_load(f)
+    #base_config = OmegaConf.load(config_path)
     
     run = wandb.init(
         job_type="train",
         entity=os.environ["WANDB_ENTITY"],
-        project=base_config.experiment.project,
-        group=base_config.experiment.group,
-        name=base_config.experiment.name,
-        id=base_config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-        config=dict(base_config),
+        #project=base_config.experiment.project,
+        #group=base_config.experiment.group,
+        #name=base_config.experiment.name,
+        #id=base_config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+        config=base_config,
         resume="allow",
     )
 

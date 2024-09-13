@@ -32,17 +32,17 @@ class ModelEngine:
             self.config = run_object
             self.run = wandb.init(
             config=dict(self.config),
-            project=self.config.experiment.project,
-            group=self.config.experiment.group,
-            name=self.config.experiment.name,
-            id=self.config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+            project=self.config.project,
+            group=self.config.group,
+            name=self.config.name,
+            id=self.config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
             resume="never",
         )
 
         else:
             raise ValueError("Invalid run_object type. Must be a DictConfig or a Run object.")
 
-        self.seed = self.config.experiment.get("seed", 42)
+        self.seed = self.config.get("seed", 42)
         set_seeds(self.seed)
 
         self.device = torch.device(self.config.model.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
@@ -69,7 +69,7 @@ class ModelEngine:
             self.model,
             self.criterion,
             log="all",
-            log_freq=self.config.experiment.get("log_freq", 0),
+            log_freq=self.config.get("log_freq", 0),
         )
 
         done = False
@@ -87,7 +87,7 @@ class ModelEngine:
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
                     break
 
-                if self.state["step"] % self.config.experiment.get("log_freq", 0) == 0:
+                if self.state["step"] % self.config.get("log_freq", 0) == 0:
                     train_metrics = {"loss": loss, "learning_rate": self.scheduler.get_last_lr()[-1]}
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
 
@@ -109,8 +109,8 @@ class ModelEngine:
     def load_run(self) -> None:
         self.run = wandb.init(
             config=dict(self.config),
-            project=self.config.experiment.wandb.project,
-            id=self.config.experiment.wandb.id,
+            project=self.config.project,
+            id=self.config.id,
             resume="must",
         )
 
