@@ -43,17 +43,16 @@ def main():
         exclude=["project", "log_freq", "seed"],
         )
 
-    run_config = DictConfig(run.config)
-    model = build_model(run_config)
-    engine = NextFrameEngine(model=model, run_object=run_config)
-    
-    #if wandb.run.resumed:
-    #    engine._resume_checkpoint()
-    
-    train_loader, val_loader = get_dataloaders(run_config)
-    
-    engine.train(train_loader, val_loader)
-    engine.run.finish()
+        run_config = DictConfig(run.config)
+        model = build_model(run_config)
+        engine = NextFrameEngine(model=model, run_object=run_config)
+
+        #if wandb.run.resumed:
+        #    engine._resume_checkpoint()
+
+        train_loader, val_loader = get_dataloaders(run_config)
+
+        engine.train(train_loader, val_loader)
 
 
 if __name__ == '__main__':
