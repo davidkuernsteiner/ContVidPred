@@ -12,6 +12,8 @@ dataset:
   train_percentage: 0.90
   num_workers: 0
   pin_memory: True
+  batch_size: 32
+  val_batch_size: 32
 
 optimization:
   loss:
@@ -26,8 +28,6 @@ optimization:
     kwargs: {step_size: 1,
              gamma: 0.5}
   epochs: 10
-  batch_size: 32
-  val_batch_size: 32
 
 metrics:
   MSE:

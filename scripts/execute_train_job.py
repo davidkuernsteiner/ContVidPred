@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Union
 
 import wandb
+from wandb.sdk import launch
 
 load_dotenv()
 
@@ -16,27 +17,34 @@ from vitssm.engine.tasks import NextFrameEngine
 from vitssm.utils import flatten_config
 
 
+wandb.login()
+wandb.require("core")
+
+
 def main():
-    base_config = OmegaConf.load(Path(os.environ['CONFIG_DIR']) / "base_config.yml")
     
-    #run = wandb.init(
-    #    job_type="train",
-    #    entity=os.environ["WANDB_ENTITY"],
-    #    project=base_config.experiment.project,
-    #    group=base_config.experiment.group,
-    #    name=base_config.experiment.name,
-    #    id=base_config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-    #    config=dict(base_config),
-    #    resume="allow",
-    #)
+    config_path = Path(os.environ['CONFIG_DIR']) / "base_config.yml"
+    launch.manage_config_file(config_path)
+    base_config = OmegaConf.load(config_path)
     
-    model = build_model(base_config)
-    engine = NextFrameEngine(model=model, run_object=base_config)
+    run = wandb.init(
+        job_type="train",
+        entity=os.environ["WANDB_ENTITY"],
+        project=base_config.experiment.project,
+        group=base_config.experiment.group,
+        name=base_config.experiment.name,
+        id=base_config.experiment.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+        config=dict(base_config),
+        resume="allow",
+    )
+
+    model = build_model(run.config)
+    engine = NextFrameEngine(model=model, run_object=run)
     
-    #if run.resumed:
-    #    engine._resume_checkpoint()
+    if run.resumed:
+        engine._resume_checkpoint()
     
-    train_loader, val_loader = get_dataloaders(base_config)
+    train_loader, val_loader = get_dataloaders(run.config)
     
     engine.train(train_loader, val_loader)
     engine.run.finish()
