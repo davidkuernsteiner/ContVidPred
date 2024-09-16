@@ -48,9 +48,9 @@ def main():
         #if wandb.run.resumed:
         #    engine._resume_checkpoint()
 
-        train_loader, val_loader = get_dataloaders(run_config)
+        #train_loader, val_loader = get_dataloaders(run_config)
 
-        engine.train(train_loader, val_loader)
+        #engine.train(train_loader, val_loader)
 
 
 if __name__ == '__main__':
