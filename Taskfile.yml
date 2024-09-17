@@ -6,8 +6,12 @@ env:
 vars:
     PROJECT: ViTSSM
     LIBRARY: vitssm
+    REPOSITORY: https://github.com/davidkuernsteiner/ViTSSM.git
     DATA_DIR: data_store
     CHECKPOINT_DIR: checkpoints
+    SCRIPTS_DIR: scripts
+    WANDB_ENTITY: davidkuernsteiner
+    WANDB_QUEUE: ML
 
 tasks:
     print-os:
@@ -25,12 +29,6 @@ tasks:
     env-remove:
         cmd: $CONDA env remove -n {{.PROJECT}} --yes
 
-    pre-commit-install:
-        cmd: pre-commit install
-
-    pre-commit:
-        cmd: pre-commit run --all-files
-
     format:
         cmds:
             - for: { var: LIBRARY }
@@ -42,30 +40,17 @@ tasks:
               cmd: ruff check {{.ITEM}} && black --diff --check --config pyproject.toml {{.ITEM}}
 
     typing:
-        cmd: pyright anomaly-next-dagster
+        cmd: pyright vitssm
 
     check:
         cmds:
             - task: lint
             - task: typing
 
-
-    dagster-dev-tmp:
-        cmd: dotenv run dagster dev -m anomaly-next-dagster --working-directory anomaly-next-dagster
-
-    dagster-build:
-        cmd: dotenv run docker compose -f ./docker-compose.yml build
-
-    dagster-run:
-        cmd: dotenv run docker compose -f ./docker-compose.yml run --rm --entrypoint "/bin/bash" dagster
-
-    dagster-push:
-        cmd: dotenv run docker compose -f ./docker-compose.yml push
-
-    dagster-up:
-        cmd: dotenv run docker compose -f ./docker-compose.yml up
-
-    dagster-build-and-push:
+    queue-up:
         cmds:
-            - task: dagster-build
-            - task: dagster-push
+            - wandb launch-agent -e {{.WANDB_ENTITY}} -q {{.WANDB_QUEUE}}
+            
+    run-train-job:
+        cmds:
+            - wandb launch --uri "{{.REPOSITORY}}" --dockerfile Dockerfile.wandb --project "{{.PROJECT}}" --job-name "train-job" --entry-point "python {{.SCRIPTS_DIR}}/execute_train_job.py"

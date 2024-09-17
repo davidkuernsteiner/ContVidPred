@@ -9,7 +9,7 @@ from xformers.components.multi_head_dispatch import MultiHeadDispatch
 from .modules import LearnablePositionalEncoding, MixedCrossAttentionBlock
 
 
-class LatentNextFramePredictionConfig(BaseModel):
+class LNFPConfig(BaseModel):
     frame_in_size: tuple[int, int] = (64, 64)
     frame_out_size: tuple[int, int] = (64, 64)
     n_frames: int = 30
@@ -28,7 +28,7 @@ class LatentNextFramePredictionConfig(BaseModel):
     mlp_dropout: float = 0.0
 
 
-class LatentNextFramePrediction(nn.Module):
+class LNFP(nn.Module):
     def __init__(
         self,
         frame_in_size: tuple[int, int] = (64, 64),
