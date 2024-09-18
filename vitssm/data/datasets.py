@@ -54,7 +54,6 @@ class VideoMDSpritesDataset(VisionDataset):
         if download and not Path(root).exists():
             self._download()
 
-
         folds_path = Path(root, "folds")
         folds_path = folds_path / f"train_{fold}.txt" if train else folds_path / f"test_{fold}.txt"
         with open(folds_path) as f:

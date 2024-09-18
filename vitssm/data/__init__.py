@@ -6,7 +6,7 @@ import torch
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import HMDB51, UCF101, Kinetics, MovingMNIST, VisionDataset
-from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype
+from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, InterpolationMode
 
 from .datasets import NextFrameDataset, VideoMDSpritesDataset
 
@@ -17,7 +17,7 @@ def get_transform(
     """Builds image transformations."""
     transform = Compose(
         [
-            Resize(config.dataset.resolution),
+            Resize(config.dataset.resolution, interpolation=InterpolationMode.BICUBIC),
             ToDtype(torch.float32, scale=True),
             Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ],
@@ -79,6 +79,7 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                     train=config.dataset.get("mode", "train") == "train",
                     fold=config.dataset.get("fold", 0),
                     transform=get_transform(config),
+                    output_format=config.dataset.get("output_format", "THWC"),
                 ),
                 frame_offset=config.dataset.get("frame_offset", 1),
             )
