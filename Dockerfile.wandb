@@ -7,15 +7,16 @@ ARG PATH="$PATH:/opt/conda/bin"
 WORKDIR /home/${MAMBA_USER}
 
 COPY env.yml  .
-
-RUN micromamba install -n base --file env.yml --yes
-RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu121
-
 COPY --chown=${MAMBA_USER} vitssm ./vitssm
+COPY --chown=${MAMBA_USER} libs ./libs
 COPY --chown=${MAMBA_USER} configs ./configs
 COPY --chown=${MAMBA_USER} scripts/ ./scripts
 RUN mkdir -p /home/${MAMBA_USER}/data_store /home/${MAMBA_USER}/checkpoints
 RUN chown -R ${MAMBA_USER} /home/${MAMBA_USER}/data_store /home/${MAMBA_USER}/checkpoints
+
+RUN micromamba install -n base --file env.yml --yes
+RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu121
+RUN pip install -e libs/latte
 
 ENV PATH="$PATH:/opt/conda/bin"
 ENV PYTHONPATH="/home/${MAMBA_USER}"

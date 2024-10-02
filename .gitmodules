@@ -1,0 +1,3 @@
+[submodule "libs/latte"]
+	path = libs/latte
+	url = https://github.com/davidkuernsteiner/Latte.git
