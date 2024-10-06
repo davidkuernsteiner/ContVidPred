@@ -21,26 +21,8 @@ wandb.login()
 
 
 class ModelEngine:
-    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:   #TODO fix wandb run type hint
+    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
         super().__init__()
-
-        #if isinstance(run_object, Run):
-        #    self.run = run_object
-        #    self.config = DictConfig(self.run.config)
-#
-        #elif isinstance(run_object, DictConfig):
-        #    self.config = run_object
-        #    self.run = wandb.init(
-        #    config=dict(self.config),
-        #    project=self.config.project,
-        #    group=self.config.group,
-        #    name=self.config.name,
-        #    id=self.config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-        #    resume="never",
-        #)
-#
-        #else:
-        #    raise ValueError("Invalid run_object type. Must be a DictConfig or a Run object.")
 
         self.config = run_object
         self.seed = self.config.get("seed", 42)
@@ -61,7 +43,7 @@ class ModelEngine:
             self.scheduler_step_on_batch = False
 
         self.criterion = get_loss(self.config)
-        self.metrics = get_metric_collection(self.config).to(self.device)
+        self.metrics = get_metric_collection(self.config).to(self.device) if self.config.get("metrics", None) is not None else None
 
         self.state = {"step": 0, "epoch": 0}
         wandb.log({"Model Parameters": count_parameters(self.model)})
@@ -80,7 +62,7 @@ class ModelEngine:
 
             self.model.train()
             for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state["epoch"]}"):
-                loss, _ = self._train_step(x.to(self.device), y.to(self.device))
+                loss, outs = self._train_step(x.to(self.device), y.to(self.device))
                 self.state["step"] += 1
 
                 if self.state["step"] == self.config.optimization.get("training_steps", 10000):
@@ -90,14 +72,14 @@ class ModelEngine:
                     break
 
                 if self.state["step"] % self.config.get("log_freq", 0) == 0:
-                    train_metrics = {"loss": loss, "learning_rate": self.scheduler.get_last_lr()[-1]}
+                    train_metrics = {"loss": loss, "learning_rate": self.scheduler.get_last_lr()[-1]} | outs
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
 
             self.model.eval()
             for x, y in eval_dataloader:
-                _, _ = self._eval_step(x.to(self.device), y.to(self.device))
+                eval_loss, _ = self._eval_step(x.to(self.device), y.to(self.device))
 
-            self._log_eval(self.state["epoch"], self.state["step"], self.metrics.compute())
+            self._log_eval(self.state["epoch"], self.state["step"], self.metrics.compute() if self.metrics is not None else {"loss": eval_loss})
 
             if (self.scheduler is not None) and (not self.scheduler_step_on_batch):
                 self.scheduler.step()
@@ -118,7 +100,7 @@ class ModelEngine:
 
         self._resume_checkpoint()
 
-    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
+    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, dict[str, Any]]:
         raise NotImplementedError
 
     def _eval_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
@@ -135,8 +117,8 @@ class ModelEngine:
     def _save_checkpoint(self) -> None:
         save_dir = os.path.join(
             os.environ["CHECKPOINT_DIR"],
-            self.run.project,
-            self.run.group,
+            self.config.project,
+            self.config.group,
         )
         os.makedirs(save_dir, exist_ok=True)
 
@@ -147,16 +129,16 @@ class ModelEngine:
             "scheduler": self.scheduler.state_dict() if self.scheduler is not None else None,
             "state": self.state,
         }
-        checkpoint_path = os.path.join(save_dir, self.run.name + ".pth")
+        checkpoint_path = os.path.join(save_dir, self.config.name + ".pth")
         torch.save(checkpoint, checkpoint_path)
-        self.run.link_model(path=checkpoint_path, registered_model_name=self.run.name)
+        wandb.link_model(path=checkpoint_path, registered_model_name=self.config.name)
 
     def _resume_checkpoint(self) -> None:
         checkpoint_path = os.path.join(
             os.environ["CHECKPOINT_DIR"],
-            self.run.project,
-            self.run.group,
-            self.run.name + ".pth",
+            self.config.project,
+            self.config.group,
+            self.config.name + ".pth",
         )
 
         checkpoint = torch.load(checkpoint_path)

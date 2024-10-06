@@ -12,9 +12,9 @@ from diffusers.models.autoencoders.vae import DecoderOutput
 class VideoVAEConfig(BaseModel):
     in_channels: int = 3
     out_channels: int = 3
-    down_block_types: tuple[str] = ("DownEncoderBlock2D",)
-    up_block_types: tuple[str] = ("UpDecoderBlock2D",)
-    block_out_channels: tuple[int] = (64,)
+    down_block_types: tuple[str, ...] = ("DownEncoderBlock2D",)
+    up_block_types: tuple[str, ...] = ("UpDecoderBlock2D",)
+    block_out_channels: tuple[int, ...] = (64,)
     layers_per_block: int = 1
     act_fn: str = "silu"
     latent_channels: int = 4

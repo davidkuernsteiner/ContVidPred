@@ -169,6 +169,12 @@ wandb/
 data_store/
 checkpoints/
 
+#Local files
+*.png
+*.jpg
+*.avi
+*.mp4
+
 # Node modules
 node_modules
 

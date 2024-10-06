@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "ViTSSM"
 version = "0.1.0"
 description = "codebase for my masters thesis project"
-requires-python = "==3.12"
 authors = [
     { name = "David Kuernsteiner", email = "david.kuernsteiner@gmail.com" }
 ]

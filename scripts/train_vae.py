@@ -30,8 +30,11 @@ def main():
     
     with wandb.init(
         job_type="train",
+        entity=os.environ["WANDB_ENTITY"],
+        project=vae_config.project,
         group=vae_config.group,
         name=vae_config.name,
+        id=vae_config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
         config=OmegaConf.to_container(vae_config, resolve=True),
         resume="allow",
     ):      

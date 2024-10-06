@@ -1,21 +1,22 @@
 project: 'ViTSSM'
 group: 'VAE'
-name: 'vmdsprites'
-log_freq: 50
+name: 'vmdsprites-vae-tiny'
+log_freq: 25
 seed: 420
 
 dataset:
   name: 'vmdsprites'
   mode: 'train'
   fold: '0'
+  output_format: 'TCHW'
   frame_skip: 5
   num_frames: 10
   resolution: 16
   train_percentage: 0.90
   num_workers: 0
   pin_memory: True
-  batch_size: 10
-  val_batch_size: 10
+  batch_size: 5
+  val_batch_size: 5
 
 optimization:
   loss:
@@ -28,12 +29,8 @@ optimization:
   scheduler:
     name: 'StepLR'
     kwargs: {step_size: 1,
-             gamma: 0.5}
+             gamma: 0.75}
   epochs: 10
-
-metrics:
-  MSE:
-    name: 'MeanSquaredError'
 
 model:
   name: 'video-vae'
@@ -42,7 +39,7 @@ model:
   down_block_types: ["DownEncoderBlock2D", "DownEncoderBlock2D"]
   up_block_types: ["UpDecoderBlock2D", "UpDecoderBlock2D"]
   block_out_channels: [16, 16]
-  layers_per_block: 1
+  layers_per_block: 2
   act_fn: "silu"
   latent_channels: 4
   norm_num_groups: 4

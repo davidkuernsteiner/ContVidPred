@@ -45,7 +45,7 @@ class VideoMDSpritesDataset(VisionDataset):
         transform: Optional[Callable] = None,
         frame_skip: int = 1,
         num_frames: int = 10,
-        output_format: Literal["TCWH", "THWC"] = "THWC",
+        output_format: Literal["TCHW", "THWC"] = "THWC",
         return_y: bool = False,
     ) -> None:
         super().__init__(root, transform=transform)
@@ -57,7 +57,7 @@ class VideoMDSpritesDataset(VisionDataset):
         self.output_format = output_format
         self.return_y = return_y
         
-        assert output_format in ["TCWH", "THWC"], "Output format should be either 'TCWH' or 'THWC'."
+        assert output_format in ["TCHW", "THWC"], "Output format should be either 'TCWH' or 'THWC'."
         assert frame_skip > 0, "Frame skip should be greater than 0."
         assert 100 >= num_frames > 0, "Number of frames not in range 1-100."
         assert num_frames % frame_skip == 0, "Number of frames should be divisible by frame skip."

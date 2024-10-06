@@ -27,3 +27,6 @@ def flatten_config(config: DictConfig, parent_key: str = None, sep: str = "_"):
 
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def min_max_normalize(tensor: torch.Tensor) -> torch.Tensor:
+    return (tensor - tensor.min()) / (tensor.max() - tensor.min())
