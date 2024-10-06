@@ -14,7 +14,7 @@ from tqdm import tqdm
 import wandb
 from wandb.sdk.wandb_run import Run
 
-from ..utils import set_seeds
+from ..utils import count_parameters, set_seeds
 from ..utils.metrics import get_metric_collection
 
 wandb.login()
@@ -64,6 +64,7 @@ class ModelEngine:
         self.metrics = get_metric_collection(self.config).to(self.device)
 
         self.state = {"step": 0, "epoch": 0}
+        wandb.log({"Model Parameters": count_parameters(self.model)})
 
     def train(self, train_dataloader: DataLoader, eval_dataloader: DataLoader) -> None:
         wandb.watch(

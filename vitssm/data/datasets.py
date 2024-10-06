@@ -43,13 +43,24 @@ class VideoMDSpritesDataset(VisionDataset):
         train: bool = True,
         fold: int = 0,
         transform: Optional[Callable] = None,
+        frame_skip: int = 1,
+        num_frames: int = 10,
         output_format: Literal["TCWH", "THWC"] = "THWC",
+        return_y: bool = False,
     ) -> None:
         super().__init__(root, transform=transform)
 
         self.train = train
         self.fold = fold
+        self.frame_skip = frame_skip
+        self.num_frames = num_frames
         self.output_format = output_format
+        self.return_y = return_y
+        
+        assert output_format in ["TCWH", "THWC"], "Output format should be either 'TCWH' or 'THWC'."
+        assert frame_skip > 0, "Frame skip should be greater than 0."
+        assert 100 >= num_frames > 0, "Number of frames not in range 1-100."
+        assert num_frames % frame_skip == 0, "Number of frames should be divisible by frame skip."
 
         if download and not Path(root).exists():
             self._download()
@@ -70,12 +81,13 @@ class VideoMDSpritesDataset(VisionDataset):
                 pts_unit="sec",
                 output_format="TCHW",
             )[0],
-        )
+        )[0 : self.num_frames*self.frame_skip : self.frame_skip]
 
         if self.transform is not None:
             video = self.transform(video)
 
-        return rearrange(video, f"T C H W -> {" ".join(self.output_format)}")
+        video = rearrange(video, f"T C H W -> {" ".join(self.output_format)}")
+        return video, video if self.return_y else video
 
     def _download(self) -> None:
         file_id = "1T7Vq7a70hu5949FJMe8yie5tvAwOmxXV"

@@ -71,14 +71,28 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                 transform=get_transform(config),
                 output_format="TCHW",
             )
-
+            
         case "vmdsprites":
+            return VideoMDSpritesDataset(
+                root=data_root / "VMDsprites",
+                train=config.dataset.get("mode", "train") == "train",
+                fold=config.dataset.get("fold", 0),
+                transform=get_transform(config),
+                frame_skip=config.dataset.get("frame_skip", 1),
+                num_frames=config.dataset.get("num_frames", 100),
+                output_format=config.dataset.get("output_format", "THWC"),
+                return_y=config.dataset.get("return_y", True),
+            )
+
+        case "nextframe-vmdsprites":
             return NextFrameDataset(
                 VideoMDSpritesDataset(
                     root=data_root / "VMDsprites",
                     train=config.dataset.get("mode", "train") == "train",
                     fold=config.dataset.get("fold", 0),
                     transform=get_transform(config),
+                    frame_skip=config.dataset.get("frame_skip", 1),
+                    num_frames=config.dataset.get("num_frames", 100),
                     output_format=config.dataset.get("output_format", "THWC"),
                 ),
                 frame_offset=config.dataset.get("frame_offset", 1),

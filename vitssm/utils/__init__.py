@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+from torch import nn
 import torch
 from omegaconf import DictConfig
 
@@ -12,6 +13,7 @@ def set_seeds(seed: int) -> None:
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
 
+
 def flatten_config(config: DictConfig, parent_key: str = None, sep: str = "_"):
     items = []
     for k, v in config.items():
@@ -21,3 +23,7 @@ def flatten_config(config: DictConfig, parent_key: str = None, sep: str = "_"):
         else:
             items.append((new_key, v))
     return DictConfig(dict(items))
+
+
+def count_parameters(model: nn.Module) -> int:
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
