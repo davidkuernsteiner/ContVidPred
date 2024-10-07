@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 from torch import nn, Tensor
 from diffusers.models import ModelMixin
 from einops import rearrange
@@ -28,6 +28,24 @@ class VideoVAEConfig(BaseModel):
     use_quant_conv: bool = True
     use_post_quant_conv: bool = True
     mid_block_add_attention: bool = True
+    
+    
+def VAETiny(**kwargs):
+    return AutoencoderKL(
+        down_block_types=("DownEncoderBlock2D", "DownEncoderBlock2D"),
+        up_block_types=("UpDecoderBlock2D", "UpDecoderBlock2D"),
+        block_out_channels=(16, 16),
+        layers_per_block=2,
+        act_fn="silu",
+        latent_channels=4,
+        norm_num_groups=4,
+        **kwargs,
+    )
+
+
+vae_models = {
+    "vae-tiny": VAETiny
+}
 
 
 """class VideoVAEWrapper(AutoencoderKL):

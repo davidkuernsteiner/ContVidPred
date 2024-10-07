@@ -1,3 +1,4 @@
+from collections import defaultdict
 import gc
 import os
 from datetime import datetime
@@ -52,9 +53,10 @@ class ModelEngine:
             self.ema = AveragedModel(
                 self.model,
                 device=self.device,
-                avg_fn=get_ema_multi_avg_fn(0.999),
+                multi_avg_fn=get_ema_multi_avg_fn(0.999),
+                use_buffers=True
             )
-            self.eval_model = self.ema
+            self.eval_model = self.ema.module
         else:
             self.eval_model = self.model
 
@@ -75,29 +77,37 @@ class ModelEngine:
 
             self.model.train()
             for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state["epoch"]}"):
-                loss, outs = self._train_step(x.to(self.device), y.to(self.device))
+                loss, train_outs = self._train_step(x.to(self.device), y.to(self.device))
                 self.state["step"] += 1
+                
                 if self.use_ema and (self.state["step"] % self.ema_steps == 0):
                     self.ema.update_parameters(self.model)
 
-                if self.state["step"] == self.config.optimization.get("training_steps", 10000):
+                if self.state["step"] == self.config.optimization.get("steps", torch.inf):
                     done = True
                     train_metrics = {"loss": loss}
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
                     break
+                elif self.state["epoch"] == self.config.optimization.get("epochs", torch.inf):
+                    done = True
 
                 if self.state["step"] % self.config.get("log_freq", 0) == 0:
-                    train_metrics = {"loss": loss, "learning_rate": self.scheduler.get_last_lr()[-1]} | outs
+                    train_metrics = {"loss": loss, "learning_rate": self.scheduler.get_last_lr()[-1]} | train_outs
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
 
             if self.use_ema:
                 update_bn(train_dataloader, self.ema, device=self.device)
                 
+            
+            eval_metrics = defaultdict(list)
             self.eval_model.eval()
             for x, y in eval_dataloader:
-                eval_loss, _ = self._eval_step(x.to(self.device), y.to(self.device))
-
-            self._log_eval(self.state["epoch"], self.state["step"], self.metrics.compute() if self.metrics is not None else {"loss": eval_loss})
+                eval_outs = self._eval_step(x.to(self.device), y.to(self.device))
+                for k, v in eval_outs.items():
+                    eval_metrics[k].append(v)
+                
+            eval_metrics = {k: sum(v) / len(v) for k, v in eval_metrics.items() if v}
+            self._log_eval(self.state["epoch"], self.state["step"], self.metrics.compute() | eval_metrics if self.metrics is not None else eval_metrics)
 
             if (self.scheduler is not None) and (not self.scheduler_step_on_batch):
                 self.scheduler.step()
@@ -121,7 +131,7 @@ class ModelEngine:
     def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, dict[str, Any]]:
         raise NotImplementedError
 
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
+    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         raise NotImplementedError
 
     @staticmethod
