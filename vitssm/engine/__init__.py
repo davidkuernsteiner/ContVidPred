@@ -8,6 +8,7 @@ from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
+from torch.optim.swa_utils import AveragedModel, get_ema_multi_avg_fn, update_bn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -30,8 +31,10 @@ class ModelEngine:
 
         self.device = torch.device(self.config.model.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
         self.use_amp = self.config.model.get("use_amp", True)
+        self.use_ema = self.config.model.get("use_ema", True)
+        self.ema_steps = self.config.model.get("ema_steps", 1)
 
-        self.model = model.to(self.device)
+        self.model = model.to(self.device)            
         self.optimizer = get_optimizer(model, self.config)
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
         if self.config.optimization.get("scheduler", None) is not None:
@@ -44,6 +47,16 @@ class ModelEngine:
 
         self.criterion = get_loss(self.config)
         self.metrics = get_metric_collection(self.config).to(self.device) if self.config.get("metrics", None) is not None else None
+        
+        if self.use_ema:
+            self.ema = AveragedModel(
+                self.model,
+                device=self.device,
+                avg_fn=get_ema_multi_avg_fn(0.999),
+            )
+            self.eval_model = self.ema
+        else:
+            self.eval_model = self.model
 
         self.state = {"step": 0, "epoch": 0}
         wandb.log({"Model Parameters": count_parameters(self.model)})
@@ -64,6 +77,8 @@ class ModelEngine:
             for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state["epoch"]}"):
                 loss, outs = self._train_step(x.to(self.device), y.to(self.device))
                 self.state["step"] += 1
+                if self.use_ema and (self.state["step"] % self.ema_steps == 0):
+                    self.ema.update_parameters(self.model)
 
                 if self.state["step"] == self.config.optimization.get("training_steps", 10000):
                     done = True
@@ -75,7 +90,10 @@ class ModelEngine:
                     train_metrics = {"loss": loss, "learning_rate": self.scheduler.get_last_lr()[-1]} | outs
                     self._log_train(self.state["epoch"], self.state["step"], train_metrics)
 
-            self.model.eval()
+            if self.use_ema:
+                update_bn(train_dataloader, self.ema, device=self.device)
+                
+            self.eval_model.eval()
             for x, y in eval_dataloader:
                 eval_loss, _ = self._eval_step(x.to(self.device), y.to(self.device))
 
@@ -128,7 +146,8 @@ class ModelEngine:
             "scaler": self.scaler.state_dict(),
             "scheduler": self.scheduler.state_dict() if self.scheduler is not None else None,
             "state": self.state,
-        }
+        } | {"ema": self.ema.state_dict()} if self.use_ema else {}
+        
         checkpoint_path = os.path.join(save_dir, self.config.name + ".pth")
         torch.save(checkpoint, checkpoint_path)
         wandb.link_model(path=checkpoint_path, registered_model_name=self.config.name)

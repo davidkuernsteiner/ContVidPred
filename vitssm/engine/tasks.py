@@ -16,7 +16,7 @@ class ActionRecognitionEngine(ModelEngine):
     def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
 
-    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
+    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, dict[str, float]]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _pred = self.model(_x)
             _loss = self.criterion(_pred, _y)
@@ -33,7 +33,7 @@ class ActionRecognitionEngine(ModelEngine):
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x)
+            _pred = self.eval_model(_x)
             _loss = self.criterion(_pred, _y)
 
         self.metrics.update(_pred, _y)
@@ -46,7 +46,7 @@ class NextFrameEngine(ModelEngine):
     def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
 
-    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
+    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, dict[str, float]]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _pred = self.model(_x)
             _loss = self.criterion(_pred, _y)
@@ -63,7 +63,7 @@ class NextFrameEngine(ModelEngine):
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x)
+            _pred = self.eval_model(_x)
             _loss = self.criterion(_pred, _y)
 
         self.metrics.update(_pred, _y)
@@ -101,9 +101,8 @@ class VideoVAEEngine(ModelEngine):
     def _eval_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _x = rearrange(_x, "b t c h w -> (b t) c h w")
-            _posterior = self.model.encode(_x).latent_dist
-            _recon = self.model.decode(_posterior.mode()).sample
-            
+            _posterior = self.eval_model.encode(_x).latent_dist
+            _recon = self.eval_model.decode(_posterior.mode()).sample  
             _loss = self.criterion(_recon, _x) + _posterior.kl().mean()
         
         if self.metrics is not None:

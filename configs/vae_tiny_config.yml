@@ -36,6 +36,7 @@ model:
   name: 'video-vae'
   device: 'cuda'
   use_amp: True
+  use_ema: True
   down_block_types: ["DownEncoderBlock2D", "DownEncoderBlock2D"]
   up_block_types: ["UpDecoderBlock2D", "UpDecoderBlock2D"]
   block_out_channels: [16, 16]
