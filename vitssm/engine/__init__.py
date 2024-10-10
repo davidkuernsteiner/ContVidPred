@@ -27,21 +27,19 @@ class ModelEngine:
         super().__init__()
 
         self.config = run_object
-        self.seed = self.config.get("seed", 42)
+        self.seed = self.config.get("seed", 0)
         set_seeds(self.seed)
 
         self.device = torch.device(self.config.model.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
         self.use_amp = self.config.model.get("use_amp", True)
-        self.use_ema = self.config.model.get("use_ema", True)
-        self.ema_steps = self.config.model.get("ema_steps", 1)
 
         self.model = model.to(self.device)            
         self.optimizer = get_optimizer(model, self.config)
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
+        
         if self.config.optimization.get("scheduler", None) is not None:
             self.scheduler = get_scheduler(self.optimizer, self.config)
             self.scheduler_step_on_batch = self.config.optimization.scheduler.get("step_on_batch", False)
-
         else:
             self.scheduler = None
             self.scheduler_step_on_batch = False
@@ -49,6 +47,8 @@ class ModelEngine:
         self.criterion = get_loss(self.config)
         self.metrics = get_metric_collection(self.config).to(self.device) if self.config.get("metrics", None) is not None else None
         
+        self.use_ema = self.config.model.get("use_ema", True)
+        self.ema_steps = self.config.model.get("ema_steps", 1)
         if self.use_ema:
             self.ema = AveragedModel(
                 self.model,
@@ -61,7 +61,14 @@ class ModelEngine:
             self.eval_model = self.model
 
         self.state = {"step": 0, "epoch": 0}
+        
         wandb.log({"Model Parameters": count_parameters(self.model)})
+        
+    def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        raise NotImplementedError
+
+    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        raise NotImplementedError
 
     def train(self, train_dataloader: DataLoader, eval_dataloader: DataLoader) -> None:
         wandb.watch(
@@ -77,7 +84,7 @@ class ModelEngine:
 
             self.model.train()
             for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state["epoch"]}"):
-                loss, train_outs = self._train_step(x.to(self.device), y.to(self.device))
+                train_outs = self._train_step(x.to(self.device), y.to(self.device))
                 self.state["step"] += 1
                 
                 if self.use_ema and (self.state["step"] % self.ema_steps == 0):
@@ -85,15 +92,17 @@ class ModelEngine:
 
                 if self.state["step"] == self.config.optimization.get("steps", torch.inf):
                     done = True
-                    train_metrics = {"loss": loss}
-                    self._log_train(self.state["epoch"], self.state["step"], train_metrics)
+                    self._log_train(self.state["epoch"], self.state["step"], train_outs)
                     break
                 elif self.state["epoch"] == self.config.optimization.get("epochs", torch.inf):
                     done = True
 
                 if self.state["step"] % self.config.get("log_freq", 0) == 0:
-                    train_metrics = {"loss": loss, "learning_rate": self.scheduler.get_last_lr()[-1]} | train_outs
-                    self._log_train(self.state["epoch"], self.state["step"], train_metrics)
+                    self._log_train(
+                        self.state["epoch"],
+                        self.state["step"],
+                        train_outs | {"learning_rate": self.scheduler.get_last_lr()[-1]}
+                    )
 
             if self.use_ema:
                 update_bn(train_dataloader, self.ema, device=self.device)
@@ -107,7 +116,11 @@ class ModelEngine:
                     eval_metrics[k].append(v)
                 
             eval_metrics = {k: sum(v) / len(v) for k, v in eval_metrics.items() if v}
-            self._log_eval(self.state["epoch"], self.state["step"], self.metrics.compute() | eval_metrics if self.metrics is not None else eval_metrics)
+            self._log_eval(
+                self.state["epoch"],
+                self.state["step"],
+                self.metrics.compute() | eval_metrics if self.metrics is not None else eval_metrics
+            )
 
             if (self.scheduler is not None) and (not self.scheduler_step_on_batch):
                 self.scheduler.step()
@@ -128,19 +141,13 @@ class ModelEngine:
 
         self._resume_checkpoint()
 
-    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, dict[str, Any]]:
-        raise NotImplementedError
-
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
-        raise NotImplementedError
+    @staticmethod
+    def _log_train(epoch: int, step: int, train_outs: dict) -> None:
+        wandb.log({"train": train_outs, "epoch": epoch}, step=step)
 
     @staticmethod
-    def _log_train(epoch: int, step: int, train_metrics: dict) -> None:
-        wandb.log({"train": train_metrics, "epoch": epoch}, step=step)
-
-    @staticmethod
-    def _log_eval(epoch: int, step: int, eval_metrics: dict) -> None:
-        wandb.log({"eval": eval_metrics, "epoch": epoch}, step=step)
+    def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
+        wandb.log({"eval": eval_outs, "epoch": epoch}, step=step)
 
     def _save_checkpoint(self) -> None:
         save_dir = os.path.join(
