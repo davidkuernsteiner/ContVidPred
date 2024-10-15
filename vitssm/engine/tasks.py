@@ -8,7 +8,7 @@ from einops import rearrange
 from wandb.sdk.wandb_run import Run
 
 from . import ModelEngine
-from models import LatteDiffusionModel
+from ..models import LatteDiffusionModel
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from latte.utils import clip_grad_norm_	
 
