@@ -82,7 +82,10 @@ class ModelEngine:
         while not done:
             self.state["epoch"] += 1
 
+            self.eval_model.cpu()
+            self.model.to(self.device)
             self.model.train()
+            
             for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state["epoch"]}"):
                 train_outs = self._train_step(x.to(self.device), y.to(self.device))
                 self.state["step"] += 1
@@ -108,8 +111,11 @@ class ModelEngine:
                 update_bn(train_dataloader, self.ema, device=self.device)
                 
             
-            eval_metrics = defaultdict(list)
+            self.model.cpu()
+            self.eval_model.to(self.device)
             self.eval_model.eval()
+            
+            eval_metrics = defaultdict(list)
             for x, y in eval_dataloader:
                 eval_outs = self._eval_step(x.to(self.device), y.to(self.device))
                 for k, v in eval_outs.items():

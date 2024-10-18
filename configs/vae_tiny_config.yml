@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'VAE'
-name: 'vmdsprites-vae-tiny'
+name: 'vmdsprites-vae-tiny-32'
 tags: ['vae', 'vmdsprites', 'tiny', 'ema']
 log_freq: 25
 seed: 420
@@ -12,7 +12,7 @@ dataset:
   output_format: 'TCHW'
   frame_skip: 5
   num_frames: 10
-  resolution: 16
+  resolution: 32
   train_percentage: 0.90
   num_workers: 0
   pin_memory: True
@@ -32,6 +32,14 @@ optimization:
     kwargs: {step_size: 1,
              gamma: 0.75}
   epochs: 10
+
+metrics:
+  SSIM:
+    name: 'StructuralSimilarityIndexMeasure'
+    kwargs: {}
+  PSNR:
+    name: 'PeakSignalNoiseRatio'
+    kwargs: {}
 
 model:
   name: 'video-vae'
