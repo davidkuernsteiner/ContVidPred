@@ -11,70 +11,9 @@ from . import ModelEngine
 from ..models import LatteDiffusionModel
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from latte.utils import clip_grad_norm_	
-
-
-class ActionRecognitionEngine(ModelEngine):
-
-    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
-
-    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, dict[str, float]]:
-        self.optimizer.zero_grad()
-        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x)
-            _loss = self.criterion(_pred, _y)
-        self.scaler.scale(_loss).backward()
-        self.scaler.step(self.optimizer)
-        self.scaler.update()
-
-        if (self.scheduler is not None) and self.scheduler_step_on_batch:
-            self.scheduler.step()
-
-        return _loss.item(), _pred
-
-    @torch.no_grad()
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
-        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.eval_model(_x)
-            _loss = self.criterion(_pred, _y)
-
-        self.metrics.update(_pred, _y)
-
-        return _loss.item(), _pred
-
-
-class NextFrameEngine(ModelEngine):
-
-    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
-
-    def _train_step(self, _x: Tensor, _y: Tensor) -> tuple[float, dict[str, float]]:
-        self.optimizer.zero_grad()
-        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x)
-            _loss = self.criterion(_pred, _y)
-        self.scaler.scale(_loss).backward()
-        self.scaler.step(self.optimizer)
-        self.scaler.update()
-
-        if (self.scheduler is not None) and self.scheduler_step_on_batch:
-            self.scheduler.step()
-
-        return _loss.item(), _pred
-
-    @torch.no_grad()
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> tuple[float, Tensor]:
-        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.eval_model(_x)
-            _loss = self.criterion(_pred, _y)
-
-        if self.metrics is not None:
-            self.metrics.update(_pred, _y)
-
-        return _loss.item(), _pred
     
     
-class VideoVAEEngine(ModelEngine):
+class VAEEngine(ModelEngine):
     
     def __init__(self, model: AutoencoderKL, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
@@ -86,7 +25,7 @@ class VideoVAEEngine(ModelEngine):
             _posterior = self.model.encode(_x).latent_dist
             _recon = self.model.decode(_posterior.sample()).sample
             
-            beta = 1e-5 #min(1.0, self.state["epoch"] / (self.config.optimization.epochs * 0.5))
+            beta = 1e-3 #min(1.0, self.state["epoch"] / (self.config.optimization.epochs * 0.5))
             _recon_loss = self.criterion(_recon, _x)
             _kl_loss = _posterior.kl().mean()
             _loss = _recon_loss + beta * _kl_loss
@@ -118,7 +57,7 @@ class VideoVAEEngine(ModelEngine):
         return {"loss": _loss.item(), "recon_loss": _recon_loss.item(), "kl_loss": _kl_loss.item()}
     
     
-class LatteEngine(ModelEngine):
+class LatteNextFrameEngine(ModelEngine):
     
     def __init__(self, model: LatteDiffusionModel, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
@@ -149,3 +88,34 @@ class LatteEngine(ModelEngine):
             _loss = self.model.forward_train(_x)
         
         return {"loss": _loss.item()}
+    
+
+class UPTNextFrameEngine(ModelEngine):
+        
+        def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
+            super().__init__(model, run_object)
+        
+        def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+            self.optimizer.zero_grad()
+            with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+                _pred = self.model(_x)
+                _loss = self.criterion(_pred, _y)
+            self.scaler.scale(_loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+            
+            if (self.scheduler is not None) and self.scheduler_step_on_batch:
+                self.scheduler.step()
+            
+            return {"loss": _loss.item()}
+        
+        @torch.no_grad()
+        def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+            with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+                _pred = self.eval_model(_x)
+                _loss = self.criterion(_pred, _y)
+            
+            if self.metrics is not None:
+                self.metrics.update(_pred, _y)
+            
+            return {"loss": _loss.item()}

@@ -2,7 +2,7 @@ project: 'ViTSSM'
 group: 'VAE'
 name: 'vmdsprites-vae-tiny-32'
 tags: ['vae', 'vmdsprites', 'tiny', 'ema']
-log_freq: 25
+log_freq: 100
 seed: 420
 
 dataset:
@@ -10,8 +10,8 @@ dataset:
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
-  frame_skip: 5
-  num_frames: 10
+  frames_per_clip: 5
+  steps_between_clips: 5
   resolution: 32
   train_percentage: 0.90
   num_workers: 0
@@ -39,6 +39,9 @@ metrics:
     kwargs: {}
   PSNR:
     name: 'PeakSignalNoiseRatio'
+    kwargs: {}
+  LPIPS:
+    name: 'LearnedPerceptualImagePatchSimilarity'
     kwargs: {}
 
 model:

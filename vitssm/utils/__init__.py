@@ -1,5 +1,7 @@
 import random
 
+from PIL import Image
+from einops import rearrange
 import numpy as np
 from torch import nn
 import torch
@@ -28,5 +30,14 @@ def flatten_config(config: DictConfig, parent_key: str = None, sep: str = "_"):
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+
 def min_max_normalize(tensor: torch.Tensor) -> torch.Tensor:
     return (tensor - tensor.min()) / (tensor.max() - tensor.min())
+
+
+def model_output_to_image(x: torch.Tensor):
+    return Image.fromarray(rearrange(min_max_normalize(x).detach().cpu().numpy() * 255, "c h w -> h w c").astype("uint8"))
+
+
+def model_output_to_video(x: torch.Tensor):
+    return rearrange(min_max_normalize(x).detach().cpu() * 255, "t c h w -> t h w c").to(torch.uint8)

@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import HMDB51, UCF101, Kinetics, MovingMNIST, VisionDataset
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, InterpolationMode
 
-from .datasets import NextFrameDataset, VideoMDSpritesDataset
+from .datasets import AEDatasetWrapper, NextFrameDataset, VideoMDSpritesDataset
 
 
 def get_transform(
@@ -26,7 +26,7 @@ def get_transform(
     return transform
 
 
-def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
+def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset, AEDatasetWrapper]:
     """Builds dataset given config."""
     data_root = Path(os.environ["DATA_DIR"])
 
@@ -52,14 +52,18 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
             )
 
         case "ucf101":
-            return UCF101(
-                root=data_root / "UCF-101",
-                annotation_path=data_root / "splits" / "ucfTrainTestlist",
-                frames_per_clip=config.dataset.get("frames_per_clip", 16),
-                step_between_clips=config.dataset.get("step_between_clips", 1),
-                train=config.dataset.get("mode", "train") == "train",
-                transform=get_transform(config),
-                output_format="TCHW",
+            return AEDatasetWrapper(
+                UCF101(
+                    root=data_root / "UCF-101",
+                    annotation_path=data_root / "splits" / "ucfTrainTestlist",
+                    frames_per_clip=config.dataset.get("frames_per_clip", 16),
+                    step_between_clips=config.dataset.get("step_between_clips", 1),
+                    train=config.dataset.get("mode", "train") == "train",
+                    transform=get_transform(config),
+                    num_workers=config.dataset.get("num_workers", 1),
+                    output_format="TCHW",
+                ),
+                return_y=config.dataset.get("return_y", True),
             )
 
         case "hmdb51":
@@ -78,8 +82,8 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                 train=config.dataset.get("mode", "train") == "train",
                 fold=config.dataset.get("fold", 0),
                 transform=get_transform(config),
-                frame_skip=config.dataset.get("frame_skip", 1),
-                num_frames=config.dataset.get("num_frames", 100),
+                frames_per_clip=config.dataset.get("frames_per_clip", 10),
+                steps_between_clips=config.dataset.get("steps_between_clips", 1),
                 output_format=config.dataset.get("output_format", "THWC"),
                 return_y=config.dataset.get("return_y", True),
             )
@@ -91,9 +95,9 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset]:
                     train=config.dataset.get("mode", "train") == "train",
                     fold=config.dataset.get("fold", 0),
                     transform=get_transform(config),
-                    frame_skip=config.dataset.get("frame_skip", 1),
-                    num_frames=config.dataset.get("num_frames", 100),
-                    output_format=config.dataset.get("output_format", "THWC"),
+                    frames_per_clip=config.dataset.get("frames_per_clip", 10),
+                    steps_between_clips=config.dataset.get("steps_between_clips", 1),
+                    output_format=config.dataset.get("output_format", "TCHW"),
                 ),
                 frame_offset=config.dataset.get("frame_offset", 1),
             )

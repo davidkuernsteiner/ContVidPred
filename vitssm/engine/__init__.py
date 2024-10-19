@@ -20,6 +20,7 @@ from ..utils import count_parameters, set_seeds
 from ..utils.metrics import get_metric_collection
 
 wandb.login()
+torch.backends.cuda.matmul.allow_tf32 = True
 
 
 class ModelEngine:

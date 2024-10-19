@@ -14,7 +14,7 @@ load_dotenv()
 
 from vitssm.data import get_dataloaders
 from vitssm.models import build_model
-from vitssm.engine.tasks import VideoVAEEngine
+from vitssm.engine.tasks import VAEEngine
 from vitssm.utils import flatten_config
 
 
@@ -44,7 +44,7 @@ def main(
         #print(wandb.config)
         run_config = OmegaConf.create(dict(wandb.config))
         model = build_model(run_config)
-        engine = VideoVAEEngine(model=model, run_object=run_config)
+        engine = VAEEngine(model=model, run_object=run_config)
 
         #if wandb.run.resumed:
         #    engine._resume_checkpoint()
