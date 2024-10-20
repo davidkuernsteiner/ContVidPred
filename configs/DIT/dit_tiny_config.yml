@@ -1,0 +1,51 @@
+project: 'ViTSSM'
+group: 'DIT'
+name: 'vmdsprites-dit-tiny'
+tags: ['dit', 'vmdsprites', 'tiny', 'ema']
+log_freq: 50
+seed: 420
+
+dataset:
+  name: 'nextframe-vmdsprites'
+  mode: 'train'
+  fold: '0'
+  output_format: 'TCHW'
+  frames_per_clip: 5
+  steps_between_clips: 1
+  resolution: 32
+  train_percentage: 0.90
+  num_workers: 4
+  pin_memory: True
+  batch_size: 32
+  val_batch_size: 32
+
+optimization:
+  loss:
+    name: 'MSELoss'
+    kwargs: {}
+  optimizer:
+    name: 'AdamW'
+    kwargs: {lr: 0.0001,
+             weight_decay: 0.0}
+  scheduler:
+    name: 'StepLR'
+    kwargs: {step_size: 1,
+             gamma: 1.0}
+  epochs: 10
+
+model:
+  name: 'dit'
+  device: 'cuda'
+  use_amp: True
+  use_ema: True
+  ema_steps: 1
+
+  vae_type: "vae-tiny"
+  vae_checkpoint_path: "/home/david/projects/ViTSSM/checkpoints/ViTSSM/VAE/vmdsprites-vae-tiny-32.pth"
+  dit_type: "DiT_T_2"
+  dit_kwargs: {
+    in_channels: 20, 
+    num_classes: 0
+  }
+  timestep_respacing: ""
+  diffusion_steps: 1000

@@ -21,6 +21,7 @@ from ..utils.metrics import get_metric_collection
 
 wandb.login()
 torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 
 class ModelEngine:

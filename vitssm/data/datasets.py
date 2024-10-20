@@ -45,7 +45,7 @@ class NextFrameDataset:
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         frames = self.dataset[index]
-        return frames[:-1], frames[-1]
+        return frames[:-1], frames[-1].unsqueeze(0)
 
     def __len__(self) -> int:
         return len(self.dataset)
@@ -99,7 +99,7 @@ class VideoMDSpritesDataset(VisionDataset):
         if self.transform is not None:
             video = self.transform(video)
 
-        return video, video if self.return_y else video
+        return video
 
     def _download(self) -> None:
         file_id = "1T7Vq7a70hu5949FJMe8yie5tvAwOmxXV"

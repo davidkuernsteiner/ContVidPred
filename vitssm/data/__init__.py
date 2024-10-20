@@ -19,7 +19,7 @@ def get_transform(
         [
             Resize(config.dataset.resolution, interpolation=InterpolationMode.BICUBIC),
             ToDtype(torch.float32, scale=True),
-            Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
         ],
     )
 
@@ -98,8 +98,8 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset, AE
                     frames_per_clip=config.dataset.get("frames_per_clip", 10),
                     steps_between_clips=config.dataset.get("steps_between_clips", 1),
                     output_format=config.dataset.get("output_format", "TCHW"),
+                    return_y=False,
                 ),
-                frame_offset=config.dataset.get("frame_offset", 1),
             )
 
         case _:

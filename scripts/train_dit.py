@@ -14,34 +14,33 @@ load_dotenv()
 
 from vitssm.data import get_dataloaders
 from vitssm.models import build_model
-from vitssm.engine.tasks import VAEEngine
-from vitssm.utils import flatten_config
+from vitssm.engine.tasks import DiTNextFrameEngine
 
 
 wandb.login()
 wandb.require("core")
 
 
-def main(config: str):  
+def main(config: str):   
     config_path = Path(os.environ["CONFIG_DIR"]) / config
     
-    vae_config = OmegaConf.load(config_path)
+    dit_config = OmegaConf.load(config_path)
     
     with wandb.init(
         job_type="train",
         entity=os.environ["WANDB_ENTITY"],
-        project=vae_config.project,
-        group=vae_config.group,
-        name=vae_config.name,
-        id=vae_config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
-        tags=vae_config.tags,
-        config=OmegaConf.to_container(vae_config, resolve=True),
+        project=dit_config.project,
+        group=dit_config.group,
+        name=dit_config.name,
+        id=dit_config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+        tags=dit_config.tags,
+        config=OmegaConf.to_container(dit_config, resolve=True),
         resume="allow",
     ):      
         #print(wandb.config)
         run_config = OmegaConf.create(dict(wandb.config))
         model = build_model(run_config)
-        engine = VAEEngine(model=model, run_object=run_config)
+        engine = DiTNextFrameEngine(model=model, run_object=run_config)
 
         #if wandb.run.resumed:
         #    engine._resume_checkpoint()
@@ -55,7 +54,7 @@ if __name__ == '__main__':
     
     args = argparse.ArgumentParser()
     
-    args.add_argument("--config", type=str, default="vae_config.yml")
+    args.add_argument("--config", type=str, default="dit_config.yml")
     
     args = args.parse_args()
     
