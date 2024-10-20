@@ -52,7 +52,7 @@ class NextFrameDataset:
 
 
 class VideoMDSpritesDataset(VisionDataset):
-
+    #TODO change data loading to fix multiprocess error. see: https://towardsdatascience.com/ml-engineering-101-a-thorough-explanation-of-the-error-dataloader-worker-pid-s-xxx-exited-f3a6a983911e
     def __init__(
         self,
         root: Union[Path, str],
