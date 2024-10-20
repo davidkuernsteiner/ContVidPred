@@ -29,6 +29,11 @@ class ModelEngine:
         super().__init__()
 
         self.config = run_object
+        self.log_freq = self.config.get("log_freq", 25)
+        self.checkpoint_freq = self.config.get("checkpoint_freq", 1000)
+        self.steps = self.config.optimization.get("steps", torch.inf)
+        self.epochs = self.config.optimization.get("epochs", torch.inf)
+        
         self.seed = self.config.get("seed", 0)
         set_seeds(self.seed)
 
@@ -77,7 +82,7 @@ class ModelEngine:
             self.model,
             self.criterion,
             log="all",
-            log_freq=self.config.get("log_freq", 0),
+            log_freq=self.log_freq,
         )
 
         done = False
@@ -95,19 +100,22 @@ class ModelEngine:
                 if self.use_ema and (self.state["step"] % self.ema_steps == 0):
                     self.ema.update_parameters(self.model)
 
-                if self.state["step"] == self.config.optimization.get("steps", torch.inf):
+                if self.state["step"] == self.steps:
                     done = True
                     self._log_train(self.state["epoch"], self.state["step"], train_outs)
                     break
-                elif self.state["epoch"] == self.config.optimization.get("epochs", torch.inf):
+                elif self.state["epoch"] == self.epochs:
                     done = True
 
-                if self.state["step"] % self.config.get("log_freq", 0) == 0:
+                if self.state["step"] % self.log_freq == 0:
                     self._log_train(
                         self.state["epoch"],
                         self.state["step"],
                         train_outs | {"learning_rate": self.scheduler.get_last_lr()[-1]}
                     )
+                    
+                if self.state["step"] % self.checkpoint_freq == 0:
+                    self._save_checkpoint()
 
             if self.use_ema:
                 update_bn(train_dataloader, self.ema, device=self.device)

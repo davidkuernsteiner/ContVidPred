@@ -3,6 +3,7 @@ group: 'DIT'
 name: 'vmdsprites-dit-tiny'
 tags: ['dit', 'vmdsprites', 'tiny', 'ema']
 log_freq: 50
+checkpoint_freq: 500
 seed: 420
 
 dataset:
@@ -14,9 +15,9 @@ dataset:
   steps_between_clips: 1
   resolution: 32
   train_percentage: 0.90
-  num_workers: 4
+  num_workers: 12
   pin_memory: True
-  batch_size: 32
+  batch_size: 128
   val_batch_size: 32
 
 optimization:
