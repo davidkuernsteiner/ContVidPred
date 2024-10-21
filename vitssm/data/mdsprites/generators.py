@@ -8,21 +8,26 @@ from .shapes import ShapeConfig
 
 
 def generate_images(
-    img_size: int, shapes: list, n_shapes: Union[int, tuple[int, int]], colors: list, background: str, n_images: int,
+    resolution: int,
+    generate_masks: bool,
+    shapes: list,
+    n_shapes: Union[int, tuple[int, int]],
+    colors: list,
+    background: str,
 ) -> Generator:
 
-    for _ in range(n_images):
+    while True:
         n_ = n_shapes if isinstance(n_shapes, int) else np.random.randint(n_shapes[0], n_shapes[1] + 1)
         shapes_ = np.random.choice(shapes, n_)
-        colors_ = [(r, g, b) for r, g, b in np.random.randint(0, 256, (n_, 3))]
-        positions = np.random.uniform(img_size * 0.1, img_size - img_size * 0.1, (n_, 2))
-        sizes = np.round(np.random.uniform(img_size * 0.1, img_size * 0.3, (n_, 2))).astype(np.int32)
+        colors_ = np.random.choice(colors, n_)
+        positions = np.random.uniform(resolution * 0.1, resolution - resolution * 0.1, (n_, 2))
+        sizes = np.random.uniform(resolution * 0.1, resolution * 0.3, (n_, 2))
         shapes_ = [
             shape(ShapeConfig(color, pos, size, 0))
             for shape, color, pos, size in zip(shapes_, colors_, positions, sizes, strict=False)
         ]
 
-        yield Frame((img_size, img_size), background, shapes_).draw()
+        yield Frame((resolution, resolution), background, shapes_, masks=generate_masks).draw()
 
 
 def generate_videos(

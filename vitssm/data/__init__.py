@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import HMDB51, UCF101, Kinetics, MovingMNIST, VisionDataset
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, InterpolationMode
 
-from .datasets import AEDatasetWrapper, NextFrameDataset, VideoMDSpritesDataset
+from .datasets import AEDatasetWrapper, NextFrameDatasetWrapper, VideoMDSpritesDataset
 
 
 def get_transform(
@@ -26,13 +26,13 @@ def get_transform(
     return transform
 
 
-def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset, AEDatasetWrapper]:
+def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDatasetWrapper, AEDatasetWrapper]:
     """Builds dataset given config."""
     data_root = Path(os.environ["DATA_DIR"])
 
     match config.dataset.name:
         case "moving_mnist":
-            return NextFrameDataset(
+            return NextFrameDatasetWrapper(
                 MovingMNIST(
                     root=data_root,
                     split=config.dataset.get("mode", "train"),
@@ -89,7 +89,7 @@ def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDataset, AE
             )
 
         case "nextframe-vmdsprites":
-            return NextFrameDataset(
+            return NextFrameDatasetWrapper(
                 VideoMDSpritesDataset(
                     root=data_root / "VMDsprites",
                     train=config.dataset.get("mode", "train") == "train",

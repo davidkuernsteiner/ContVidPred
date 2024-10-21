@@ -22,7 +22,7 @@ class Frame:
         self.shapes = shapes
         self.masks = masks
 
-    def draw(self) -> Union[Image.Image, tuple[Image.Image, list[Image.Image]]]:
+    def draw(self):
         img = Image.fromarray(np.full((self.h, self.w, 3), self.background_color, dtype=np.uint8))
         draw = ImageDraw.Draw(img)
 
@@ -40,7 +40,7 @@ class Frame:
         masks = (
             [Image.fromarray(255 * np.array(mask_full == i, dtype=np.uint8)) for i in range(len(self.shapes) + 1)]
             if self.masks
-            else []
+            else None
         )
 
         return img, masks
