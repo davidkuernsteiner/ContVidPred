@@ -11,6 +11,15 @@ from torchvision.datasets import VisionDataset
 from torchvision.datasets.video_utils import VideoClips
 from torchvision.io import read_video
 from torchvision.tv_tensors import Video
+from glob import glob
+
+import numpy as np
+from PIL import ImageFile
+from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
+
+
+from .read import read_video
+from .utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, read_file, temporal_random_crop
 
 
 class AEDatasetWrapper:
@@ -112,3 +121,61 @@ class VideoMDSpritesDataset(VisionDataset):
             zip_ref.extractall(os.path.dirname(self.root))
 
         os.remove(output_path)
+        
+
+#ADAPTED FROM: https://github.com/hpcaitech/Open-Sora/blob/main/opensora/datasets/datasets.py
+class VideoDataset(torch.utils.data.Dataset):
+    """load video according to the csv file.
+
+    Args:
+        target_video_len (int): the number of video frames will be load.
+        align_transform (callable): Align different videos in a specified size.
+        temporal_sample (callable): Sample the target length of a video.
+    """
+
+    def __init__(
+        self,
+        data_path: str | None = None,
+        num_frames: int = 16,
+        frame_interval: int = 1,
+        image_size: tuple[int, int] = (256, 256),
+        transform_name: str = "center",
+    ):
+        self.data_path = data_path
+        self.data = read_file(data_path)
+        self.num_frames = num_frames
+        self.frame_interval = frame_interval
+        self.image_size = image_size
+        self.transforms = get_transforms_video(transform_name, image_size),
+
+    def getitem(self, index: int):
+        sample = self.data.iloc[index]
+        path = sample["path"]
+        # loading
+        vframes, vinfo = read_video(path, backend="av")
+        video_fps = vinfo["video_fps"] if "video_fps" in vinfo else 24
+        # Sampling video frames
+        video = temporal_random_crop(vframes, self.num_frames, self.frame_interval)
+        # transform
+        video = self.transforms(video)  # T C H W
+        # TCHW -> CTHW
+        #video = video.permute(1, 0, 2, 3)
+
+        ret = {"video": video, "fps": video_fps}
+
+        return ret
+
+    def __getitem__(self, index: int):
+        for _ in range(10):
+            try:
+                return self.getitem(index)
+            except Exception as e:
+                path = self.data.iloc[index]["path"]
+                print(f"data {path}: {e}")
+                index = np.random.randint(len(self))
+        raise RuntimeError("Too many bad data.")
+
+    def __len__(self):
+        return len(self.data)
+
+

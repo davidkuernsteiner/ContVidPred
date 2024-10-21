@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 from tqdm import tqdm
 from datetime import datetime
+import pandas as pd
 
 from PIL import ImageColor
 from torchvision.io import write_video
@@ -71,24 +72,21 @@ def main(
         video, masks = next(video_generator)
         video_path = data_folder / "videos" / f"video_{i}.avi"
         
-        write_video(video_path, video, fps=10)
+        write_video(video_path, video, fps=1)
         video_paths.append(video_path)
         
         if generate_masks:
             for j, mask in enumerate(masks):
                 mask_dir = data_folder / "masks" / f"{i}"
                 os.makedirs(mask_dir, exist_ok=True)
-                write_video(mask_dir / f"video_{i}_mask_{j}.avi", mask, fps=10)
+                write_video(mask_dir / f"video_{i}_mask_{j}.avi", mask, fps=1)
     
     fold_dir = data_folder / "folds"
     os.makedirs(fold_dir, exist_ok=True)
     for fold_idx in range(n_folds):
-        train_spilt, test_split = split_list(video_paths, train_ratio)
-        
-        with open(fold_dir / f"train_{fold_idx}.txt", "w") as f:
-            f.write("\n".join([str(p) for p in train_spilt]))
-        with open(fold_dir / f"test_{fold_idx}.txt", "w") as f:
-            f.write("\n".join([str(p) for p in test_split]))       
+        train_split, test_split = split_list(video_paths, train_ratio)       
+        pd.DataFrame({"path": train_split}).to_csv(fold_dir / f"train_{fold_idx}.csv", index=False)
+        pd.DataFrame({"path": test_split}).to_csv(fold_dir / f"test_{fold_idx}.csv", index=False)   
 
 
 if __name__ == "__main__":
