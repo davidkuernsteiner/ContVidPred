@@ -82,13 +82,13 @@ class VideoDataset(torch.utils.data.Dataset):
         self.num_frames = num_frames
         self.frame_interval = frame_interval
         self.image_size = image_size
-        self.transforms = get_transforms_video(transform_name, image_size),
+        self.transforms = get_transforms_video(transform_name, image_size)
 
     def getitem(self, index: int):
         sample = self.data.iloc[index]
         path = sample["path"]
         # loading
-        vframes, vinfo = read_video(path, backend="av")
+        vframes, vinfo = read_video(path, backend="cv2")
         video_fps = vinfo["video_fps"] if "video_fps" in vinfo else 24
         # Sampling video frames
         video = temporal_random_crop(vframes, self.num_frames, self.frame_interval)
@@ -184,9 +184,8 @@ class VideoMDSpritesDataset(VisionDataset):
             self._download()
 
         folds_path = Path(root, "folds")
-        folds_path = folds_path / f"train_{fold}.txt" if train else folds_path / f"test_{fold}.txt"
-        with open(folds_path) as f:
-            self.video_paths = f.read().splitlines()
+        folds_path = folds_path / f"train_{fold}.csv" if train else folds_path / f"test_{fold}.csv"
+        self.video_paths = list(read_file(str(folds_path))["path"])
             
         self.video_clips = VideoClips(
             self.video_paths,

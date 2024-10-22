@@ -77,9 +77,7 @@ def temporal_random_crop(vframes, num_frames, frame_interval):
 
 
 def get_transforms_video(name="center", image_size=(256, 256)):
-    if name is None:
-        return None
-    elif name == "center":
+    if name == "center":
         assert image_size[0] == image_size[1], "image_size must be square for center crop"
         transform_video = transforms_pt.Compose(
             [
@@ -103,9 +101,7 @@ def get_transforms_video(name="center", image_size=(256, 256)):
 
 
 def get_transforms_image(name="center", image_size=(256, 256)):
-    if name is None:
-        return None
-    elif name == "center":
+    if name == "center":
         assert image_size[0] == image_size[1], "Image size must be square for center crop"
         transform = transforms_pt.Compose(
             [

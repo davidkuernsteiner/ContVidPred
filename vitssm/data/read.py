@@ -251,7 +251,7 @@ def read_video_cv2(video_path):
 
 
 #TAKEN FROM: https://github.com/hpcaitech/Open-Sora.git
-def read_video(video_path, backend="av"):
+def read_video(video_path, backend="cv2"):
     if backend == "cv2":
         vframes, vinfo = read_video_cv2(video_path)
     elif backend == "av":
