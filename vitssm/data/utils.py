@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 import torch
 import torchvision
-import torchvision.transforms.v2 as transforms_pt
+import torchvision.transforms as transforms_pt
 from PIL import Image
 from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
 from torchvision.io import write_video
@@ -106,7 +106,6 @@ def get_transforms_image(name="center", image_size=(256, 256)):
         transform = transforms_pt.Compose(
             [
                 transforms_pt.Lambda(lambda pil_image: center_crop_arr(pil_image, image_size[0])),
-                # transforms.RandomHorizontalFlip(),
                 transforms_pt.ToTensor(),
                 transforms_pt.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
             ]

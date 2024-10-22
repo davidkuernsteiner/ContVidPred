@@ -17,18 +17,17 @@ class VAEEngine(ModelEngine):
     
     def __init__(self, model: AutoencoderKL, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
+        self.beta = self.config.model.get("beta", 1.0)
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _x = rearrange(_x, "b t c h w -> (b t) c h w")
             _posterior = self.model.encode(_x).latent_dist
             _recon = self.model.decode(_posterior.sample()).sample
             
-            beta = 1e-3 #min(1.0, self.state["epoch"] / (self.config.optimization.epochs * 0.5))
             _recon_loss = self.criterion(_recon, _x)
             _kl_loss = _posterior.kl().mean()
-            _loss = _recon_loss + beta * _kl_loss
+            _loss = _recon_loss + self.beta * _kl_loss
             
         self.scaler.scale(_loss).backward()
         self.scaler.step(self.optimizer)
@@ -42,14 +41,12 @@ class VAEEngine(ModelEngine):
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _x = rearrange(_x, "b t c h w -> (b t) c h w")
             _posterior = self.eval_model.encode(_x).latent_dist
             _recon = self.eval_model.decode(_posterior.sample()).sample
             
-            beta = min(1.0, self.state["epoch"] / self.config.optimization.epochs)
             _recon_loss = self.criterion(_recon, _x)
             _kl_loss = _posterior.kl().mean()
-            _loss = _recon_loss + beta * _kl_loss
+            _loss = _recon_loss + self.beta * _kl_loss
         
         if self.metrics is not None:
             self.metrics.update(_recon, _x)

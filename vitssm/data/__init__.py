@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple, Union, Any
 
 import torch
 from omegaconf import DictConfig
@@ -8,7 +8,8 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import HMDB51, UCF101, Kinetics, MovingMNIST, VisionDataset
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, InterpolationMode
 
-from .datasets import AEDatasetWrapper, NextFrameDatasetWrapper, VideoMDSpritesDataset
+from .datasets import AEDatasetWrapper, NextFrameDatasetWrapper, ImageDataset, VideoDataset
+from .utils import get_transforms_video
 
 
 def get_transform(
@@ -17,7 +18,7 @@ def get_transform(
     """Builds image transformations."""
     transform = Compose(
         [
-            Resize(config.dataset.resolution, interpolation=InterpolationMode.BICUBIC),
+            Resize(config.resolution, interpolation=InterpolationMode.BICUBIC),
             ToDtype(torch.float32, scale=True),
             Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
         ],
@@ -26,84 +27,68 @@ def get_transform(
     return transform
 
 
-def get_dataset(config: DictConfig) -> Union[VisionDataset, NextFrameDatasetWrapper, AEDatasetWrapper]:
+def get_dataset(config: DictConfig) -> Any:
     """Builds dataset given config."""
     data_root = Path(os.environ["DATA_DIR"])
 
-    match config.dataset.name:
-        case "moving_mnist":
-            return NextFrameDatasetWrapper(
-                MovingMNIST(
-                    root=data_root,
-                    split=config.dataset.get("mode", "train"),
-                    download=True,
-                    transform=get_transform(config),
-                ),
-            )
-
-        case "kinetics":
-            return Kinetics(
-                root=data_root / "kinetics",
-                frames_per_clip=10,
-                split=config.dataset.get("mode", "train"),
-                download=True,
-                transform=get_transform(config),
-                output_format="TCHW",
-            )
-
+    match config.name:
         case "ucf101":
+            res = config.get("resolution", 64)
+            
             return AEDatasetWrapper(
                 UCF101(
                     root=data_root / "UCF-101",
-                    annotation_path=data_root / "splits" / "ucfTrainTestlist",
-                    frames_per_clip=config.dataset.get("frames_per_clip", 16),
-                    step_between_clips=config.dataset.get("step_between_clips", 1),
-                    train=config.dataset.get("mode", "train") == "train",
-                    transform=get_transform(config),
-                    num_workers=config.dataset.get("num_workers", 1),
+                    annotation_path=str(data_root / "splits" / "ucfTrainTestlist"),
+                    frames_per_clip=config.get("frames_per_clip", 16),
+                    step_between_clips=config.get("step_between_clips", 1),
+                    train=config.get("mode", "train") == "train",
+                    transform=get_transforms_video(image_size=(res, res)),
+                    num_workers=config.get("num_workers", 1),
                     output_format="TCHW",
                 ),
-                return_y=config.dataset.get("return_y", True),
+                return_y=config.get("return_y", True),
             )
-
-        case "hmdb51":
-            return HMDB51(
-                root=data_root / "HMDB51",
-                annotation_path=data_root / "splits" / "testTrainMulti_7030_splits",
-                frames_per_clip=config.dataset.get("frames_per_clip", 16),
-                train=config.dataset.get("mode", "train") == "train",
-                transform=get_transform(config),
-                output_format="TCHW",
+            
+        case "mdsprites-ae":
+            fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
+            res = config.get("resolution", 64)
+            
+            return AEDatasetWrapper(
+                ImageDataset(
+                    data_path=str(data_root / "MDsprites" / "folds" / fold),
+                    image_size=(res, res),
+                    transform_name="center",
+                )
             )
             
         case "vmdsprites":
-            return VideoMDSpritesDataset(
-                root=data_root / "VMDsprites",
-                train=config.dataset.get("mode", "train") == "train",
-                fold=config.dataset.get("fold", 0),
-                transform=get_transform(config),
-                frames_per_clip=config.dataset.get("frames_per_clip", 10),
-                steps_between_clips=config.dataset.get("steps_between_clips", 1),
-                output_format=config.dataset.get("output_format", "THWC"),
-                return_y=config.dataset.get("return_y", True),
+            fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
+            res = config.get("resolution", 64)
+            
+            return VideoDataset(
+                data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                num_frames=config.get("num_frames", 10),
+                frame_interval=config.get("frame_interval", 1),
+                image_size=(res, res),
+                transform_name=config.get("transform_name", "center"),
             )
 
-        case "nextframe-vmdsprites":
+        case "vmdsprites-nextframe":
+            fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
+            res = config.get("resolution", 64)
+            
             return NextFrameDatasetWrapper(
-                VideoMDSpritesDataset(
-                    root=data_root / "VMDsprites",
-                    train=config.dataset.get("mode", "train") == "train",
-                    fold=config.dataset.get("fold", 0),
-                    transform=get_transform(config),
-                    frames_per_clip=config.dataset.get("frames_per_clip", 10),
-                    steps_between_clips=config.dataset.get("steps_between_clips", 1),
-                    output_format=config.dataset.get("output_format", "TCHW"),
-                    return_y=False,
-                ),
+                VideoDataset(
+                    data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                    num_frames=config.get("num_frames", 10),
+                    frame_interval=config.get("frame_interval", 1),
+                    image_size=(res, res),
+                    transform_name=config.get("transform_name", "center"),
+                )
             )
 
         case _:
-            raise ValueError(f"Unknown dataset: {config.dataset.name}")
+            raise ValueError(f"Unknown dataset: {config.name}")
 
 
 def get_dataloaders(
@@ -112,32 +97,33 @@ def get_dataloaders(
     """Builds dataloaders for training and validation."""
     dataset = get_dataset(config)
 
-    if config.dataset.mode == "train":
+    if config.mode == "train":
         train_set, val_set = random_split(
-            dataset, [config.dataset.train_percentage, 1 - config.dataset.train_percentage],
+            dataset, [config.train_percentage, 1 - config.train_percentage],
         )
 
         train_loader = DataLoader(
             train_set,
-            batch_size=config.dataset.batch_size,
+            batch_size=config.batch_size,
             shuffle=True,
-            num_workers=config.dataset.get("num_workers", 1),
-            pin_memory=config.dataset.get("pin_memory", False),
+            num_workers=config.get("num_workers", 1),
+            pin_memory=config.get("pin_memory", False),
         )
         val_loader = DataLoader(
             val_set,
-            batch_size=config.dataset.get("val_batch_size", config.dataset.batch_size),
+            batch_size=config.get("val_batch_size", config.batch_size),
             shuffle=False,
-            num_workers=config.dataset.get("num_workers", 1),
-            pin_memory=config.dataset.get("pin_memory", False),
+            num_workers=config.get("num_workers", 1),
+            pin_memory=config.get("pin_memory", False),
         )
 
         return train_loader, val_loader
 
     return DataLoader(
         dataset,
-        batch_size=config.dataset.batch_size,
+        batch_size=config.batch_size,
         shuffle=False,
         num_workers=config.get("num_workers", 1),
-        pin_memory=config.dataset.get("pin_memory", False),
+        pin_memory=config.get("pin_memory", False),
     )
+    

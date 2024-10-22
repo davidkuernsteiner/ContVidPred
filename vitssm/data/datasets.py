@@ -36,7 +36,7 @@ class AEDatasetWrapper:
     
         def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
             outputs = self.dataset[index]
-            return outputs[0], outputs[0] if self.return_y else outputs[0]
+            return outputs, outputs if self.return_y else outputs
     
         def __len__(self) -> int:
             return len(self.dataset)
@@ -131,7 +131,7 @@ class ImageDataset(torch.utils.data.Dataset):
         self.data_path = data_path
         self.data = read_file(data_path)
         self.image_size = image_size
-        self.transforms = get_transforms_image(transform_name, image_size),
+        self.transforms = get_transforms_image(transform_name, image_size)
 
     def getitem(self, index: int):
         sample = self.data.iloc[index]

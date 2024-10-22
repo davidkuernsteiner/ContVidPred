@@ -1,23 +1,21 @@
 project: 'ViTSSM'
 group: 'VAE'
-name: 'vmdsprites-vae-tiny-32'
-tags: ['vae', 'vmdsprites', 'tiny', 'ema']
-log_freq: 100
+name: 'mdsprites-vae-small-64'
+tags: ['vae', 'vmdsprites', 'small', 'ema']
+log_freq: 50
+checkpoint_freq: 99999999999
 seed: 420
 
 dataset:
-  name: 'vmdsprites'
+  name: 'mdsprites-ae'
   mode: 'train'
   fold: '0'
-  output_format: 'TCHW'
-  frames_per_clip: 5
-  steps_between_clips: 5
-  resolution: 32
+  resolution: 64
   train_percentage: 0.90
-  num_workers: 0
+  num_workers: 8
   pin_memory: True
-  batch_size: 5
-  val_batch_size: 5
+  batch_size: 64
+  val_batch_size: 64
 
 optimization:
   loss:
@@ -30,8 +28,8 @@ optimization:
   scheduler:
     name: 'StepLR'
     kwargs: {step_size: 1,
-             gamma: 0.75}
-  epochs: 10
+             gamma: 0.95}
+  epochs: 100
 
 metrics:
   SSIM:
@@ -45,14 +43,15 @@ metrics:
     kwargs: {}
 
 model:
-  name: 'video-vae'
+  name: 'vae'
   device: 'cuda'
   use_amp: True
   use_ema: True
   ema_steps: 1
-  down_block_types: ["DownEncoderBlock2D", "DownEncoderBlock2D"]
-  up_block_types: ["UpDecoderBlock2D", "UpDecoderBlock2D"]
-  block_out_channels: [16, 16]
+  beta: 0.001
+  down_block_types: ["DownEncoderBlock2D", "DownEncoderBlock2D", "DownEncoderBlock2D"]
+  up_block_types: ["UpDecoderBlock2D", "UpDecoderBlock2D", "UpDecoderBlock2D"]
+  block_out_channels: [32, 32, 32]
   layers_per_block: 2
   act_fn: "silu"
   latent_channels: 4

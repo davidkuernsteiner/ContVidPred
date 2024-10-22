@@ -23,7 +23,7 @@ wandb.require("core")
 
 
 def main(config: str):  
-    config_path = Path(os.environ["CONFIG_DIR"]) / config
+    config_path = Path(os.environ["CONFIG_DIR"]) / "VAE" / config
     
     vae_config = OmegaConf.load(config_path)
     
@@ -36,17 +36,17 @@ def main(config: str):
         id=vae_config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
         tags=vae_config.tags,
         config=OmegaConf.to_container(vae_config, resolve=True),
-        resume="allow",
+        resume="never",
     ):      
         #print(wandb.config)
         run_config = OmegaConf.create(dict(wandb.config))
-        model = build_model(run_config)
+        model = build_model(run_config.model)
         engine = VAEEngine(model=model, run_object=run_config)
 
         #if wandb.run.resumed:
         #    engine._resume_checkpoint()
 
-        train_loader, val_loader = get_dataloaders(run_config)
+        train_loader, val_loader = get_dataloaders(run_config.dataset)
 
         engine.train(train_loader, val_loader)
 

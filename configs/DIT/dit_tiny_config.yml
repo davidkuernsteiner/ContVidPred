@@ -11,14 +11,14 @@ dataset:
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
-  frames_per_clip: 5
-  steps_between_clips: 1
+  num_frames: 5
+  frame_interval: 1
   resolution: 32
   train_percentage: 0.90
-  num_workers: 12
+  num_workers: 8
   pin_memory: True
   batch_size: 128
-  val_batch_size: 32
+  val_batch_size: 128
 
 optimization:
   loss:

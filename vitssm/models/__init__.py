@@ -10,21 +10,21 @@ from .dit import NextFrameDiTModelConfig, NextFrameDiTModel
 
 def build_model(config: DictConfig) -> Module:
     """Builds model given config."""
-    match config.model.name:
-        case "video-vae":
-            model_config = VideoVAEConfig(**config.model)
+    match config.name:
+        case "vae":
+            model_config = VideoVAEConfig(**config)
             model = AutoencoderKL(**model_config.model_dump())
             return model
         
         case "latte":
-            model_config = LatteDiffusionModelConfig(**config.model)
+            model_config = LatteDiffusionModelConfig(**config)
             model = LatteDiffusionModel(**model_config.model_dump())
             return model
         
         case "dit":
-            model_config = NextFrameDiTModelConfig(**config.model)
+            model_config = NextFrameDiTModelConfig(**config)
             model = NextFrameDiTModel(**model_config.model_dump())
             return model
 
         case _:
-            raise ValueError(f"Model {config.model.name} not supported.")
+            raise ValueError(f"Model {config.name} not supported.")
