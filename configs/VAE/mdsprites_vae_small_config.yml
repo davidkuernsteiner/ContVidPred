@@ -38,9 +38,9 @@ metrics:
   PSNR:
     name: 'PeakSignalNoiseRatio'
     kwargs: {}
-  LPIPS:
-    name: 'LearnedPerceptualImagePatchSimilarity'
-    kwargs: {}
+#  LPIPS:
+#    name: 'LearnedPerceptualImagePatchSimilarity'
+#    kwargs: {}
 
 model:
   name: 'vae'

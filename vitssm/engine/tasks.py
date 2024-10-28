@@ -1,6 +1,7 @@
 from typing import Any, Union
 
 import torch
+import numpy as np
 from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
 from einops import rearrange
@@ -9,6 +10,7 @@ from wandb.sdk.wandb_run import Run
 
 from . import ModelEngine
 from ..models import LatteDiffusionModel
+from ..models.vae import frange_cycle_linear
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from latte.utils import clip_grad_norm_	
     
@@ -17,9 +19,13 @@ class VAEEngine(ModelEngine):
     
     def __init__(self, model: AutoencoderKL, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
-        self.beta = self.config.model.get("beta", 1.0)
+        if self.config.model.get("use_beta_schedule", True):
+            self.betas = frange_cycle_linear(self.steps, start=0.0, stop=self.config.model.get("beta", 1.0), n_cycle=4, ratio=0.5)
+        else:
+            self.betas = np.ones(self.steps) * self.config.model.get("beta", 1.0)
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        beta = self.betas[self.state["step"] - 1]
         self.optimizer.zero_grad()
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _posterior = self.model.encode(_x).latent_dist
@@ -27,7 +33,7 @@ class VAEEngine(ModelEngine):
             
             _recon_loss = self.criterion(_recon, _x)
             _kl_loss = _posterior.kl().mean()
-            _loss = _recon_loss + self.beta * _kl_loss
+            _loss = _recon_loss + beta * _kl_loss
             
         self.scaler.scale(_loss).backward()
         self.scaler.step(self.optimizer)
@@ -36,17 +42,18 @@ class VAEEngine(ModelEngine):
         if (self.scheduler is not None) and self.scheduler_step_on_batch:
             self.scheduler.step()
         
-        return {"loss": _loss.item(), "recon_loss": _recon_loss.item(), "kl_loss": _kl_loss.item()}
+        return {"loss": _loss.item(), "recon_loss": _recon_loss.item(), "kl_loss": _kl_loss.item(), "beta": beta}
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        beta = self.betas[self.state["step"] - 1]
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _posterior = self.eval_model.encode(_x).latent_dist
             _recon = self.eval_model.decode(_posterior.sample()).sample
             
             _recon_loss = self.criterion(_recon, _x)
             _kl_loss = _posterior.kl().mean()
-            _loss = _recon_loss + self.beta * _kl_loss
+            _loss = _recon_loss + beta * _kl_loss
         
         if self.metrics is not None:
             self.metrics.update(_recon, _x)
