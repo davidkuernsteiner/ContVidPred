@@ -9,10 +9,11 @@ from typing import Union
 
 import wandb
 from wandb.sdk import launch
+from torch.utils.data import DataLoader
 
 load_dotenv()
 
-from vitssm.data import get_dataloaders
+from vitssm.data import get_dataloaders_next_frame, get_dataset
 from vitssm.models import build_model
 from vitssm.engine.tasks import DiTNextFrameEngine
 
@@ -39,13 +40,13 @@ def main(config: str):
     ):      
         #print(wandb.config)
         run_config = OmegaConf.create(dict(wandb.config))
-        model = build_model(run_config)
+        model = build_model(run_config.model)
         engine = DiTNextFrameEngine(model=model, run_object=run_config)
 
         #if wandb.run.resumed:
         #    engine._resume_checkpoint()
 
-        train_loader, val_loader = get_dataloaders(run_config)
+        train_loader, val_loader = get_dataloaders_next_frame(run_config.dataset)
 
         engine.train(train_loader, val_loader)
 

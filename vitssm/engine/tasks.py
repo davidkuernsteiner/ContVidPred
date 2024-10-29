@@ -7,10 +7,12 @@ from torch import Tensor, nn
 from einops import rearrange
 
 from wandb.sdk.wandb_run import Run
+import wandb
 
 from . import ModelEngine
 from ..models import LatteDiffusionModel
 from ..models.vae import frange_cycle_linear
+from ..utils.metrics import RolloutMetricCollectionWrapper
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from latte.utils import clip_grad_norm_	
     
@@ -65,6 +67,7 @@ class DiTNextFrameEngine(ModelEngine):
     
     def __init__(self, model: LatteDiffusionModel, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
+        self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, _context_frames: Tensor, _next_frame: Tensor) -> dict[str, float]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
@@ -82,9 +85,14 @@ class DiTNextFrameEngine(ModelEngine):
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _loss = self.model.forward_train(_x)
+            _frames = self.eval_model.rollout_frames(_x, _y.shape[1])
+        self.metrics.update(_frames, _y)
         
-        return {"loss": _loss.item()}
+        return {}
+    
+    @staticmethod
+    def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
+        wandb.log(eval_outs, step=step)
     
 
 class UPTNextFrameEngine(ModelEngine):

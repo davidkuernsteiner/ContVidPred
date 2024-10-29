@@ -241,6 +241,7 @@ class DiT(nn.Module):
             x = block(x, c)                      # (N, T, D)
         x = self.final_layer(x, c)                # (N, T, patch_size ** 2 * out_channels)
         x = self.unpatchify(x)                   # (N, out_channels, H, W)
+        
         return x
 
     def forward_with_cfg(self, x, t, y, cfg_scale):
@@ -358,10 +359,10 @@ def DiT_S_8(**kwargs):
     return DiT(depth=12, hidden_size=384, patch_size=8, num_heads=6, **kwargs)
 
 def DiT_T_2(**kwargs):
-    return DiT(depth=4, hidden_size=96, patch_size=2, num_heads=3, input_size=16, **kwargs)
+    return DiT(depth=4, hidden_size=96, patch_size=2, num_heads=3, input_size=8, **kwargs)
 
 def DiT_T_4(**kwargs):
-    return DiT(depth=4, hidden_size=96, patch_size=4, num_heads=3, input_size=16, **kwargs)
+    return DiT(depth=4, hidden_size=96, patch_size=4, num_heads=3, input_size=8, **kwargs)
 
 def DiT_M_1(**kwargs):
     return DiT(depth=2, hidden_size=48, patch_size=1, num_heads=2, input_size=16, **kwargs)

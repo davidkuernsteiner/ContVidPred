@@ -1,24 +1,27 @@
 project: 'ViTSSM'
 group: 'DIT'
-name: 'vmdsprites-dit-tiny'
+name: 'vmdsprites-dit-tiny-16'
 tags: ['dit', 'vmdsprites', 'tiny', 'ema']
 log_freq: 50
-checkpoint_freq: 500
+eval_freq: 10
+checkpoint_freq: 9999999999999
 seed: 420
 
 dataset:
-  name: 'nextframe-vmdsprites'
+  name: 'vmdsprites-nextframe'
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
   num_frames: 5
+  context_length: 4
   frame_interval: 1
-  resolution: 32
+  resolution: 16
   train_percentage: 0.90
   num_workers: 8
   pin_memory: True
-  batch_size: 128
-  val_batch_size: 128
+  batch_size: 32
+  val_batch_size: 32
+  rollout_length: 16
 
 optimization:
   loss:
@@ -27,26 +30,35 @@ optimization:
   optimizer:
     name: 'AdamW'
     kwargs: {lr: 0.0001,
-             weight_decay: 0.0}
+             weight_decay: 0.01}
   scheduler:
-    name: 'StepLR'
-    kwargs: {step_size: 1,
-             gamma: 1.0}
-  epochs: 10
+    name: 'LambdaLR'
+    kwargs: {warmup_steps: 1000,
+             decay_steps: 9000}
+    step_on_batch: True
+  steps: 10000
+
+metrics:
+  SSIM:
+    name: 'StructuralSimilarityIndexMeasure'
+    kwargs: {}
+  PSNR:
+    name: 'PeakSignalNoiseRatio'
+    kwargs: {}
 
 model:
   name: 'dit'
   device: 'cuda'
-  use_amp: True
+  use_amp: False
   use_ema: True
   ema_steps: 1
 
   vae_type: "vae-tiny"
-  vae_checkpoint_path: "/home/david/projects/ViTSSM/checkpoints/ViTSSM/VAE/vmdsprites-vae-tiny-32.pth"
+  vae_checkpoint_path: "/home/david/projects/ViTSSM/checkpoints/ViTSSM/VAE/mdsprites-vae-tiny-16-schedule-small-beta.pth"
   dit_type: "DiT_T_2"
   dit_kwargs: {
     in_channels: 20, 
     num_classes: 0
   }
   timestep_respacing: ""
-  diffusion_steps: 1000
+  diffusion_steps: 100

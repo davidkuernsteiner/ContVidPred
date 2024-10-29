@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'VAE'
-name: 'mdsprites-vae-tiny-16-schedule-small-beta'
+name: 'mdsprites-vae-tiny-32-schedule-beta-5e-4'
 tags: ['vae', 'vmdsprites', 'tiny', 'ema']
 log_freq: 50
 checkpoint_freq: 99999999999
@@ -10,7 +10,7 @@ dataset:
   name: 'mdsprites-ae'
   mode: 'train'
   fold: '0'
-  resolution: 16
+  resolution: 32
   train_percentage: 0.90
   num_workers: 12
   pin_memory: True
@@ -50,7 +50,7 @@ model:
   use_ema: True
   ema_steps: 1
   use_beta_schedule: True
-  beta: 0.0001
+  beta: 0.0005
   down_block_types: ["DownEncoderBlock2D", "DownEncoderBlock2D"]
   up_block_types: ["UpDecoderBlock2D", "UpDecoderBlock2D"]
   block_out_channels: [16, 16]

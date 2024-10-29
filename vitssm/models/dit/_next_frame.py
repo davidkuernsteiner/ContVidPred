@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from einops import rearrange
 
 from ._dit import DiT, DiT_models
-from ..diffusion import create_diffusion
+from ..diffusion import create_diffusion, SpacedDiffusion
+from ...utils import ema_to_model_state_dict
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 
 from ..vae import VideoVAEConfig, vae_models
@@ -48,7 +49,10 @@ class NextFrameDiTModel(nn.Module):
         
         self.vae = vae_models[vae_type](**vae_kwargs)
         if vae_checkpoint_path is not None:
-            self.vae.load_state_dict(torch.load(vae_checkpoint_path)["ema" if "ema" in vae_checkpoint_path else "model"])
+            checkpoint = torch.load(vae_checkpoint_path)
+            self.vae.load_state_dict(
+                ema_to_model_state_dict(checkpoint["ema"]) if "ema" in checkpoint.keys() else checkpoint["model"]
+            )
         self.vae.requires_grad_(False)
             
         self.dit = DiT_models[dit_type](**dit_kwargs)
@@ -68,23 +72,55 @@ class NextFrameDiTModel(nn.Module):
         x = rearrange(x, 'b t c h w -> (b t) c h w')
         
         with torch.no_grad():
-            x = self.vae.encode(x).latent_dist.sample().mul_(0.18215)
+            z = self.vae.encode(x).latent_dist.sample().mul_(0.18215)
             
-        x = rearrange(x, '(b t) c h w -> b t c h w', b=b)
-        x = rearrange(x, "b t c h w -> b (t c) h w")
-        x_context, x = torch.split(
-            x,
-            [int((t - 1) * (x.shape[1] / t)),  int(x.shape[1] / t)],
+        z = rearrange(z, '(b t) c h w -> b t c h w', b=b)
+        z = rearrange(z, "b t c h w -> b (t c) h w")
+        z_context, z = torch.split(
+            z,
+            [int((t - 1) * (z.shape[1] / t)),  int(z.shape[1] / t)],
             dim=1
         )
         
-        model_kwargs = dict(x_context=x_context, y=None)
-        t = torch.randint(0, self.diffusion.num_timesteps, (x.shape[0],), device=self.device)
+        model_kwargs = dict(x_context=z_context, y=None)
+        t = torch.randint(0, self.diffusion.num_timesteps, (z.shape[0],), device=self.device)
         
-        loss_dict = self.diffusion.training_losses(self.dit, x, t, model_kwargs=model_kwargs)
+        loss_dict = self.diffusion.training_losses(self.dit, z, t, model_kwargs=model_kwargs)
         loss = loss_dict["loss"].mean()
         
         return loss
     
-    def sample() -> Tensor:
-        pass
+    def sample_frame_latents(self, z_context: Tensor) -> Tensor:
+        n, t, c_z, h_z, w_z = z_context.shape
+        z = torch.randn(n, c_z, h_z, w_z, device=self.device)
+        z_context = rearrange(z_context, "n t c h w -> n (t c) h w")
+        model_kwargs = dict(x_context=z_context, y=None)
+        
+        samples = self.diffusion.ddim_sample_loop(
+            self.dit, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=False, device=self.device
+        )
+        
+        return samples
+    
+    def rollout_frames(self, x_context: Tensor, n_steps: int) -> Tensor:
+        """
+        Rollout frames using the model.
+        x_context: [N, T, C, H, W]
+        """
+        n, t, c, h, w = x_context.shape
+        x_context = rearrange(x_context, "n t c h w -> (n t) c h w")
+        z_context = self.vae.encode(x_context).latent_dist.sample().mul_(0.18215)
+        z_context = rearrange(z_context, "(n t) c h w -> n t c h w", n=n)
+        
+        frames = []
+        for _ in range(n_steps):
+            frame = self.sample_frame_latents(z_context).unsqueeze(1)
+            frames.append(frame)
+            z_context = torch.cat((z_context[:, 1:], frame), dim=1)
+        
+        frames = torch.cat(frames, dim=1)
+        frames = rearrange(frames, "n t c h w -> (n t) c h w")
+        frames = self.vae.decode(frames / 0.18215).sample
+        frames = rearrange(frames, "(n t) c h w -> n t c h w", n=n)
+        
+        return frames

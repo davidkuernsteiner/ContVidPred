@@ -31,6 +31,7 @@ class ModelEngine:
         self.config = run_object
         self.log_freq = self.config.get("log_freq", 25)
         self.checkpoint_freq = self.config.get("checkpoint_freq", 1000)
+        self.eval_freq = self.config.get("eval_freq", 1)
         self.steps = self.config.optimization.get("steps", torch.inf)
         self.epochs = self.config.optimization.get("epochs", torch.inf)
         
@@ -116,28 +117,29 @@ class ModelEngine:
                     
                 if self.state["step"] % self.checkpoint_freq == 0:
                     self._save_checkpoint()
-
-            if self.use_ema:
-                update_bn(train_dataloader, self.ema, device=self.device)
                 
-            
-            self.model.cpu()
-            self.eval_model.to(self.device)
-            self.eval_model.eval()
-            
-            eval_metrics = defaultdict(list)
-            for x, y in eval_dataloader:
-                eval_outs = self._eval_step(x.to(self.device), y.to(self.device))
-                for k, v in eval_outs.items():
-                    eval_metrics[k].append(v)
-                
-            eval_metrics = {k: sum(v) / len(v) for k, v in eval_metrics.items() if v}
-            self._log_eval(
-                self.state["epoch"],
-                self.state["step"],
-                self.metrics.compute() | eval_metrics if self.metrics is not None else eval_metrics
-            )
+            if (self.state["epoch"] % self.eval_freq == 0) or done:
+                if self.use_ema:
+                    update_bn(train_dataloader, self.ema, device=self.device)
+                self.model.cpu()
+                self.eval_model.to(self.device)
+                self.eval_model.eval()
 
+                eval_metrics = defaultdict(list)
+                for x, y in eval_dataloader:
+                    eval_outs = self._eval_step(x.to(self.device), y.to(self.device))
+                    for k, v in eval_outs.items():
+                        eval_metrics[k].append(v)
+
+                eval_metrics = {k: sum(v) / len(v) for k, v in eval_metrics.items() if v}
+                self._log_eval(
+                    self.state["epoch"],
+                    self.state["step"],
+                    self.metrics.compute() | eval_metrics if self.metrics is not None else eval_metrics
+                )
+                if self.metrics is not None:
+                    self.metrics.reset()
+                
             if (self.scheduler is not None) and (not self.scheduler_step_on_batch):
                 self.scheduler.step()
 

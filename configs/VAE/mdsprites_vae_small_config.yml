@@ -10,12 +10,12 @@ dataset:
   name: 'mdsprites-ae'
   mode: 'train'
   fold: '0'
-  resolution: 64
+  resolution: 32
   train_percentage: 0.90
-  num_workers: 8
+  num_workers: 12
   pin_memory: True
-  batch_size: 64
-  val_batch_size: 64
+  batch_size: 32
+  val_batch_size: 32
 
 optimization:
   loss:
@@ -26,10 +26,11 @@ optimization:
     kwargs: {lr: 0.001,
              weight_decay: 0.01}
   scheduler:
-    name: 'StepLR'
-    kwargs: {step_size: 1,
-             gamma: 0.95}
-  epochs: 100
+    name: 'LambdaLR'
+    kwargs: {warmup_steps: 5000,
+             decay_steps: 45000}
+    step_on_batch: True
+  steps: 50000
 
 metrics:
   SSIM:
@@ -45,14 +46,15 @@ metrics:
 model:
   name: 'vae'
   device: 'cuda'
-  use_amp: True
+  use_amp: False
   use_ema: True
   ema_steps: 1
-  beta: 0.001
+  use_beta_schedule: True
+  beta: 0.0001
   down_block_types: ["DownEncoderBlock2D", "DownEncoderBlock2D", "DownEncoderBlock2D"]
   up_block_types: ["UpDecoderBlock2D", "UpDecoderBlock2D", "UpDecoderBlock2D"]
   block_out_channels: [32, 32, 32]
   layers_per_block: 2
   act_fn: "silu"
   latent_channels: 4
-  norm_num_groups: 4
+  norm_num_groups: 16

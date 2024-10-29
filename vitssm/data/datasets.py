@@ -22,8 +22,7 @@ from .read import read_video
 from .utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, read_file, temporal_random_crop
 
 
-class AEDatasetWrapper:
-    
+class AEDatasetWrapper:  
         def __init__(
             self,
             dataset: VisionDataset,
@@ -43,18 +42,19 @@ class AEDatasetWrapper:
         
 
 class NextFrameDatasetWrapper:
-
     def __init__(
         self,
         dataset: VisionDataset,
+        context_length: int = 1,
     ) -> None:
         super().__init__()
 
         self.dataset = dataset
+        self.context_length = context_length
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         frames = self.dataset[index]
-        return frames[:-1], frames[-1].unsqueeze(0)
+        return frames[:self.context_length], frames[self.context_length:]
 
     def __len__(self) -> int:
         return len(self.dataset)

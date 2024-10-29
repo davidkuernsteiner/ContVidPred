@@ -84,7 +84,8 @@ def get_dataset(config: DictConfig) -> Any:
                     frame_interval=config.get("frame_interval", 1),
                     image_size=(res, res),
                     transform_name=config.get("transform_name", "center"),
-                )
+                ),
+                context_length=config.get("context_length", 1),
             )
 
         case _:
@@ -126,4 +127,33 @@ def get_dataloaders(
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
     )
+
+
+def get_dataloaders_next_frame(
+    config: DictConfig,
+) -> tuple[DataLoader, DataLoader]:
+    train_set = get_dataset(config)
+    
+    eval_config = config.copy()
+    eval_config["num_frames"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
+    eval_config["mode"] = "test"
+    eval_set = get_dataset(eval_config)
+    
+    train_loader = DataLoader(
+        train_set,
+        batch_size=config.batch_size,
+        shuffle=True,
+        num_workers=config.get("num_workers", 1),
+        pin_memory=config.get("pin_memory", False),
+    )
+    
+    eval_loader = DataLoader(
+        eval_set,
+        batch_size=config.get("val_batch_size", config.batch_size),
+        shuffle=False,
+        num_workers=config.get("num_workers", 1),
+        pin_memory=config.get("pin_memory", False),
+    )
+    
+    return train_loader, eval_loader
     
