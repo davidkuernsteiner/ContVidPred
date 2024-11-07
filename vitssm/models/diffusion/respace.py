@@ -37,6 +37,10 @@ def space_timesteps(num_timesteps, section_counts):
             raise ValueError(
                 f"cannot create exactly {num_timesteps} steps with an integer stride"
             )
+        elif section_counts.startswith("trailing"):
+            desired_count = int(section_counts[len("trailing") :])
+            return set(map(round, range(num_timesteps - 1, 0, -int(num_timesteps/desired_count))))
+        
         section_counts = [int(x) for x in section_counts.split(",")]
     size_per = num_timesteps // len(section_counts)
     extra = num_timesteps % len(section_counts)

@@ -358,17 +358,17 @@ def DiT_S_4(**kwargs):
 def DiT_S_8(**kwargs):
     return DiT(depth=12, hidden_size=384, patch_size=8, num_heads=6, **kwargs)
 
-def DiT_T_2(**kwargs):
-    return DiT(depth=4, hidden_size=96, patch_size=2, num_heads=3, input_size=8, **kwargs)
-
-def DiT_T_4(**kwargs):
-    return DiT(depth=4, hidden_size=96, patch_size=4, num_heads=3, input_size=8, **kwargs)
-
 def DiT_M_1(**kwargs):
-    return DiT(depth=2, hidden_size=48, patch_size=1, num_heads=2, input_size=16, **kwargs)
+    return DiT(depth=4, hidden_size=96, patch_size=1, num_heads=2, **kwargs)
 
 def DiT_M_2(**kwargs):
-    return DiT(depth=2, hidden_size=48, patch_size=2, num_heads=2, input_size=16, **kwargs)
+    return DiT(depth=4, hidden_size=96, patch_size=2, num_heads=2, **kwargs)
+
+def DiT_T_1(**kwargs):
+    return DiT(depth=2, hidden_size=48, patch_size=1, num_heads=1, **kwargs)
+
+def DiT_T_2(**kwargs):
+    return DiT(depth=2, hidden_size=48, patch_size=2, num_heads=1, **kwargs)
 
 
 DiT_models = {
@@ -376,6 +376,6 @@ DiT_models = {
     'DiT-L/2':  DiT_L_2,   'DiT-L/4':  DiT_L_4,   'DiT-L/8':  DiT_L_8,
     'DiT-B/2':  DiT_B_2,   'DiT-B/4':  DiT_B_4,   'DiT-B/8':  DiT_B_8,
     'DiT-S/2':  DiT_S_2,   'DiT-S/4':  DiT_S_4,   'DiT-S/8':  DiT_S_8,
-    'DiT_T_2': DiT_T_2,   'DiT_T_4':  DiT_T_4,
+    'DiT_T_1': DiT_T_1,   'DiT_T_2':  DiT_T_2,
     'DiT_M_1': DiT_M_1,   'DiT_M_2':  DiT_M_2,
 }

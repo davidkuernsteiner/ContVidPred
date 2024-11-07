@@ -1,9 +1,9 @@
 project: 'ViTSSM'
 group: 'DIT'
-name: 'vmdsprites-dit-tiny-16'
+name: 'vmdsprites-DiT_T_1-VAE-16'
 tags: ['dit', 'vmdsprites', 'tiny', 'ema']
 log_freq: 50
-eval_freq: 10
+eval_freq: 20
 checkpoint_freq: 9999999999999
 seed: 420
 
@@ -19,8 +19,8 @@ dataset:
   train_percentage: 0.90
   num_workers: 8
   pin_memory: True
-  batch_size: 32
-  val_batch_size: 32
+  batch_size: 128
+  val_batch_size: 64
   rollout_length: 16
 
 optimization:
@@ -34,8 +34,13 @@ optimization:
   scheduler:
     name: 'LambdaLR'
     kwargs: {warmup_steps: 1000,
-             decay_steps: 9000}
+             decay_steps: 9000,
+             gamma: 0.1}
     step_on_batch: True
+  #scheduler:
+  #  name: 'StepLR'
+  #  kwargs: {step_size: 1, gamma: 1.0}
+  #  step_on_batch: False
   steps: 10000
 
 metrics:
@@ -54,11 +59,14 @@ model:
   ema_steps: 1
 
   vae_type: "vae-tiny"
-  vae_checkpoint_path: "/home/david/projects/ViTSSM/checkpoints/ViTSSM/VAE/mdsprites-vae-tiny-16-schedule-small-beta.pth"
-  dit_type: "DiT_T_2"
+  vae_checkpoint_path: Null #"/home/david/projects/ViTSSM/checkpoints/ViTSSM/VAE/mdsprites-vae-tiny-16-schedule-small-beta.pth"
+  latent_scale_factor: 0.18215
+  dit_type: "DiT_T_1"
   dit_kwargs: {
-    in_channels: 20, 
-    num_classes: 0
+    in_channels: 15,
+    out_channels: 3,
+    num_classes: 0,
+    input_size: 16,
   }
   timestep_respacing: ""
   diffusion_steps: 100

@@ -28,10 +28,12 @@ class NextFrameDiTModelConfig(BaseModel):
     vae_type: Literal["vae-tiny", "vae-small", "vae-base", "vae-large"] = "vae-tiny"
     vae_kwargs: dict[str, Any] = {}
     vae_checkpoint_path: str | None = None
-    dit_type: Literal['DiT_T_2', 'DiT_T_4', 'DiT_M_1', 'DiT_M_2'] = "DiT_T_2"
+    latent_scale_factor: float = 0.18215
+    dit_type: Literal['DiT_T_1', 'DiT_T_2', 'DiT_M_1', 'DiT_M_2'] = "DiT_T_1"
     dit_kwargs: dict[str, Any] = {}
     timestep_respacing: str = ""
     diffusion_steps: int = 1000
+    device: Literal["cpu", "cuda"] = "cuda"
 
 
 class NextFrameDiTModel(nn.Module):
@@ -40,20 +42,24 @@ class NextFrameDiTModel(nn.Module):
         vae_type: Literal["vae-tiny", "vae-small", "vae-base", "vae-large"] = "vae-tiny",
         vae_kwargs: dict = {},
         vae_checkpoint_path: str | None = None,
-        dit_type: Literal['DiT_T_2', 'DiT_T_4', 'DiT_M_1', 'DiT_M_2'] = "DiT_T_2",
+        latent_scale_factor: float = 0.18215,
+        dit_type: Literal['DiT_T_1', 'DiT_T_2', 'DiT_M_1', 'DiT_M_2'] = "DiT_T_1",
         dit_kwargs: dict = {},
         timestep_respacing: str = "",
         diffusion_steps: int = 1000,
+        device: Literal["cpu", "cuda"] = "cuda"
     ):
         super().__init__()
         
-        self.vae = vae_models[vae_type](**vae_kwargs)
         if vae_checkpoint_path is not None:
+            self.vae = vae_models[vae_type](**vae_kwargs)
             checkpoint = torch.load(vae_checkpoint_path)
             self.vae.load_state_dict(
                 ema_to_model_state_dict(checkpoint["ema"]) if "ema" in checkpoint.keys() else checkpoint["model"]
             )
-        self.vae.requires_grad_(False)
+            self.vae.requires_grad_(False)
+        else:
+            self.vae = None
             
         self.dit = DiT_models[dit_type](**dit_kwargs)
         self.dit.initialize_weights()
@@ -64,40 +70,43 @@ class NextFrameDiTModel(nn.Module):
                 diffusion_steps=diffusion_steps,
             ).model_dump()
         )
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        self.device = torch.device(device)
+        self.scale_factor = latent_scale_factor
     
     def forward_train(self, _context_frames: Tensor, _next_frame: Tensor) -> float:
         x = torch.cat((_context_frames, _next_frame), dim=1)
         b, t, _, _, _ = x.shape
-        x = rearrange(x, 'b t c h w -> (b t) c h w')
         
-        with torch.no_grad():
-            z = self.vae.encode(x).latent_dist.sample().mul_(0.18215)
-            
-        z = rearrange(z, '(b t) c h w -> b t c h w', b=b)
-        z = rearrange(z, "b t c h w -> b (t c) h w")
-        z_context, z = torch.split(
-            z,
-            [int((t - 1) * (z.shape[1] / t)),  int(z.shape[1] / t)],
+        if self.vae is not None:
+            x = rearrange(x, 'b t c h w -> (b t) c h w')
+            with torch.no_grad():
+                x = self.vae.encode(x).latent_dist.sample().mul_(self.scale_factor)    
+            x = rearrange(x, '(b t) c h w -> b t c h w', b=b)
+        
+        x = rearrange(x, "b t c h w -> b (t c) h w")
+        x_context, x = torch.split(
+            x,
+            [int((t - 1) * (x.shape[1] / t)),  int(x.shape[1] / t)],
             dim=1
         )
         
-        model_kwargs = dict(x_context=z_context, y=None)
-        t = torch.randint(0, self.diffusion.num_timesteps, (z.shape[0],), device=self.device)
+        model_kwargs = dict(x_context=x_context, y=None)
+        t = torch.randint(0, self.diffusion.num_timesteps, (x.shape[0],), device=self.device)
         
-        loss_dict = self.diffusion.training_losses(self.dit, z, t, model_kwargs=model_kwargs)
+        loss_dict = self.diffusion.training_losses(self.dit, x, t, model_kwargs=model_kwargs)
         loss = loss_dict["loss"].mean()
         
         return loss
     
-    def sample_frame_latents(self, z_context: Tensor) -> Tensor:
-        n, t, c_z, h_z, w_z = z_context.shape
-        z = torch.randn(n, c_z, h_z, w_z, device=self.device)
-        z_context = rearrange(z_context, "n t c h w -> n (t c) h w")
-        model_kwargs = dict(x_context=z_context, y=None)
+    def sample_frame_latents(self, x_context: Tensor) -> Tensor:
+        n, t, c, h, w = x_context.shape
+        x = torch.randn(n, c, h, w, device=self.device)
+        x_context = rearrange(x_context, "n t c h w -> n (t c) h w")
+        model_kwargs = dict(x_context=x_context, y=None)
         
         samples = self.diffusion.ddim_sample_loop(
-            self.dit, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=False, device=self.device
+            self.dit, x.shape, x, clip_denoised=False, model_kwargs=model_kwargs, progress=False, device=self.device
         )
         
         return samples
@@ -108,19 +117,22 @@ class NextFrameDiTModel(nn.Module):
         x_context: [N, T, C, H, W]
         """
         n, t, c, h, w = x_context.shape
-        x_context = rearrange(x_context, "n t c h w -> (n t) c h w")
-        z_context = self.vae.encode(x_context).latent_dist.sample().mul_(0.18215)
-        z_context = rearrange(z_context, "(n t) c h w -> n t c h w", n=n)
+        if self.vae is not None:
+            x_context = rearrange(x_context, "n t c h w -> (n t) c h w")
+            x_context = self.vae.encode(x_context).latent_dist.sample().mul_(self.scale_factor)
+            x_context = rearrange(x_context, "(n t) c h w -> n t c h w", n=n)
         
         frames = []
         for _ in range(n_steps):
-            frame = self.sample_frame_latents(z_context).unsqueeze(1)
+            frame = self.sample_frame_latents(x_context).unsqueeze(1)
             frames.append(frame)
-            z_context = torch.cat((z_context[:, 1:], frame), dim=1)
+            x_context = torch.cat((x_context[:, 1:], frame), dim=1)
         
         frames = torch.cat(frames, dim=1)
-        frames = rearrange(frames, "n t c h w -> (n t) c h w")
-        frames = self.vae.decode(frames / 0.18215).sample
-        frames = rearrange(frames, "(n t) c h w -> n t c h w", n=n)
+        
+        if self.vae is not None:
+            frames = rearrange(frames, "n t c h w -> (n t) c h w")
+            frames = self.vae.decode(frames / self.scale_factor).sample
+            frames = rearrange(frames, "(n t) c h w -> n t c h w", n=n)
         
         return frames

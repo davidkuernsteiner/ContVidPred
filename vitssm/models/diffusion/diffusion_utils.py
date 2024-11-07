@@ -86,3 +86,24 @@ def discretized_gaussian_log_likelihood(x, *, means, log_scales):
     )
     assert log_probs.shape == x.shape
     return log_probs
+
+
+def enforce_zero_terminal_snr(betas):
+    #Convertbetas toalphas_bar_sqrt
+    alphas = 1 - betas
+    alphas_bar = alphas.cumprod(0)
+    alphas_bar_sqrt = alphas_bar.sqrt()  
+    #Storeoldvalues.
+    alphas_bar_sqrt_0 = alphas_bar_sqrt[0].clone()
+    alphas_bar_sqrt_T = alphas_bar_sqrt[-1].clone()
+    #Shiftsolast timestepiszero.
+    alphas_bar_sqrt -= alphas_bar_sqrt_T
+    #Scalesofirsttimestepisbacktooldvalue.
+    alphas_bar_sqrt *= alphas_bar_sqrt_0 / (alphas_bar_sqrt_0 - alphas_bar_sqrt_T)
+
+    alphas_bar = alphas_bar_sqrt ** 2
+    alphas = alphas_bar[1:]/alphas_bar[:-1]
+    alphas = th.cat([alphas_bar[0:1], alphas])
+    betas = 1 - alphas
+    
+    return betas
