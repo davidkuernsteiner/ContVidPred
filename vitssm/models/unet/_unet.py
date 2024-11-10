@@ -1,7 +1,8 @@
 from typing import Any, Optional, Union
 from pydantic import BaseModel
 
-from diffusers import UNet2DConditionModel
+from diffusers import UNet2DModel
+from diffusers.models.unets.unet_2d import UNet2DOutput
 import torch
 
 
@@ -61,52 +62,61 @@ import torch
 #    addition_embed_type_num_heads: int = 64,
 
 
-class UNet2DNextFrameModel(UNet2DConditionModel):
+class UNet2DNextFrameModel(UNet2DModel):
     def __init__(**kwargs):
         super().__init__(**kwargs)
     
     def forward(
         self,
         sample: torch.Tensor,
-        context: torch.Tensor,
         timestep: Union[torch.Tensor, float, int],
-        encoder_hidden_states: torch.Tensor,
+        context: Optional[torch.Tensor] = None,
         class_labels: Optional[torch.Tensor] = None,
-        timestep_cond: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        cross_attention_kwargs: Optional[dict[str, Any]] = None,
-        added_cond_kwargs: Optional[dict[str, torch.Tensor]] = None,
-        down_block_additional_residuals: Optional[tuple[torch.Tensor]] = None,
-        mid_block_additional_residual: Optional[torch.Tensor] = None,
-        down_intrablock_additional_residuals: Optional[tuple[torch.Tensor]] = None,
-        encoder_attention_mask: Optional[torch.Tensor] = None,
-        return_dict: bool = True,
-    ) -> Union[UNet2DConditionOutput, tuple]:
+    ) -> torch.Tensor:
         
-        sample = torch.cat((context, sample), dim=1)
+        if context is not None:
+            sample = torch.cat((context, sample), dim=1)
         
         return super().forward(
             sample=sample,
             timestep=timestep,
-            encoder_hidden_states=encoder_hidden_states,
             class_labels=class_labels,
-            timestep_cond=timestep_cond,
-            attention_mask=attention_mask,
-            cross_attention_kwargs=cross_attention_kwargs,
-            added_cond_kwargs=added_cond_kwargs,
-            down_block_additional_residuals=down_block_additional_residuals,
-            mid_block_additional_residual=mid_block_additional_residual,
-            down_intrablock_additional_residuals=down_intrablock_additional_residuals,
-            encoder_attention_mask=encoder_attention_mask,
-            return_dict=return_dict,
-        )
+            return_dict=True,
+        ).sample
+        
+    def forward_with_cfg(
+        self,
+        sample: torch.Tensor,
+        timestep: Union[torch.Tensor, float, int],
+        context: Optional[torch.Tensor] = None,
+        class_labels: Optional[torch.Tensor] = None,
+        cfg_scale: float = 7.5,
+        cfg_rescale_factor: float = 0.7,
+    ) -> torch.Tensor:
+        
+        half = sample[: len(sample) // 2]
+        combined = torch.cat([half, half], dim=0)
+        model_out = self.forward(combined, timestep=timestep, context=context, class_labels=class_labels)
+        
+        x_pos, x_neg = torch.split(model_out, len(model_out) // 2, dim=0)
+        x_cfg = x_neg + cfg_scale * (x_pos - x_neg)
+        
+        # Apply improved cfg https://arxiv.org/pdf/2305.08891
+        std_pos = x_pos.std([1,2,3], keepdim=True)
+        std_cfg = x_cfg.std([1,2,3], keepdim=True)
+        factor = std_pos / std_cfg
+        factor = cfg_rescale_factor * factor + (1- cfg_rescale_factor)
+        x_cfg = x_cfg * factor
+        x_cfg = torch.cat([x_cfg, x_cfg], dim=0)
+        
+        return x_cfg
 
 
 def UNet_B(**kwargs):
-    return UNet2DConditionModel(
-        down_block_types=("CrossAttnDownBlock2D", "CrossAttnDownBlock2D", "DownBlock2D",),
-        mid_block_type="UNetMidBlock2DCrossAttn",
-        up_block_types=("UpBlock2D", "CrossAttnUpBlock2D", "CrossAttnUpBlock2D"),
+    return UNet2DNextFrameModel(
+        down_block_types=("AttnDownBlock2D", "AttnDownBlock2D", "DownBlock2D",),
+        mid_block_type="UNetMidBlock2D",
+        up_block_types=("UpBlock2D", "AttnUpBlock2D", "AttnUpBlock2D"),
         block_out_channels=(128, 256, 512),
         layers_per_block=2,
         cross_attention_dim=512,
@@ -114,10 +124,10 @@ def UNet_B(**kwargs):
     )
 
 def UNet_S(**kwargs):
-    return UNet2DConditionModel(
-        down_block_types=("CrossAttnDownBlock2D", "CrossAttnDownBlock2D", "DownBlock2D",),
-        mid_block_type="UNetMidBlock2DCrossAttn",
-        up_block_types=("UpBlock2D", "CrossAttnUpBlock2D", "CrossAttnUpBlock2D"),
+    return UNet2DNextFrameModel(
+        down_block_types=("AttnDownBlock2D", "AttnDownBlock2D", "DownBlock2D",),
+        mid_block_type="UNetMidBlock2D",
+        up_block_types=("UpBlock2D", "AttnUpBlock2D", "AttnUpBlock2D"),
         block_out_channels=(64, 128, 256),
         layers_per_block=2,
         cross_attention_dim=256,
@@ -125,10 +135,10 @@ def UNet_S(**kwargs):
     )
 
 def UNet_T(**kwargs):
-    return UNet2DConditionModel(
-        down_block_types=("CrossAttnDownBlock2D", "DownBlock2D",),
-        mid_block_type="UNetMidBlock2DCrossAttn",
-        up_block_types=("UpBlock2D", "CrossAttnUpBlock2D"),
+    return UNet2DNextFrameModel(
+        down_block_types=("AttnDownBlock2D", "DownBlock2D",),
+        mid_block_type="UNetMidBlock2D",
+        up_block_types=("UpBlock2D", "AttnUpBlock2D"),
         block_out_channels=(128, 256),
         layers_per_block=2,
         cross_attention_dim=256,
@@ -136,10 +146,10 @@ def UNet_T(**kwargs):
     )
 
 def UNet_M(**kwargs):
-    return UNet2DConditionModel(
-        down_block_types=("CrossAttnDownBlock2D", "DownBlock2D",),
-        mid_block_type="UNetMidBlock2DCrossAttn",
-        up_block_types=("UpBlock2D", "CrossAttnUpBlock2D"),
+    return UNet2DNextFrameModel(
+        down_block_types=("AttnDownBlock2D", "DownBlock2D",),
+        mid_block_type="UNetMidBlock2D",
+        up_block_types=("UpBlock2D", "AttnUpBlock2D"),
         block_out_channels=(64, 128),
         layers_per_block=1,
         cross_attention_dim=128,
