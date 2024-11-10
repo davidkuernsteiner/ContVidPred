@@ -6,6 +6,7 @@ from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from .vae import VideoVAEConfig
 from .latte import LatteDiffusionModelConfig, LatteDiffusionModel
 from .dit import NextFrameDiTModelConfig, NextFrameDiTModel
+from .unet import UncondUNetModel, UncondUNetModelConfig, NextFrameUNetModel, NextFrameUNetModelConfig
 
 
 def build_model(config: DictConfig) -> Module:

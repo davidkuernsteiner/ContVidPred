@@ -317,6 +317,10 @@ class GaussianDiffusion:
 
         if self.model_mean_type == ModelMeanType.START_X:
             pred_xstart = process_xstart(model_output)
+        elif self.model_mean_type == ModelMeanType.VELOCITY:
+            pred_xstart = process_xstart(
+                self._predict_xstart_from_v(x_t=x, t=t, v=model_output)
+            )
         else:
             pred_xstart = process_xstart(
                 self._predict_xstart_from_eps(x_t=x, t=t, eps=model_output)
@@ -343,6 +347,15 @@ class GaussianDiffusion:
         return (
             _extract_into_tensor(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t - pred_xstart
         ) / _extract_into_tensor(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape)
+        
+    def _predict_v_from_eps_xstart(self, x_t, t, pred_xstart, eps):
+        return _extract_into_tensor(self.alphas_cumprod, t, x_t.shape).sqrt() * eps - (1 - _extract_into_tensor(self.alphas_cumprod, t, x_t.shape)).sqrt() * pred_xstart
+    
+    def _predict_eps_from_v(self, v, x_t, t):
+        return _extract_into_tensor(self.alphas_cumprod, t, x_t.shape).sqrt() * v + (1 - _extract_into_tensor(self.alphas_cumprod, t, x_t.shape)).sqrt() * x_t
+    
+    def _predict_xstart_from_v(self, v, x_t, t):
+        return _extract_into_tensor(self.alphas_cumprod, t, x_t.shape).sqrt() * x_t - (1 - _extract_into_tensor(self.alphas_cumprod, t, x_t.shape)).sqrt() * v
 
     def condition_mean(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
         """
@@ -775,6 +788,7 @@ class GaussianDiffusion:
                 )[0],
                 ModelMeanType.START_X: x_start,
                 ModelMeanType.EPSILON: noise,
+                ModelMeanType.VELOCITY: self._predict_v_from_eps_xstart(x_t, t, x_start, noise),
             }[self.model_mean_type]
             assert model_output.shape == target.shape == x_start.shape
             terms["mse"] = mean_flat((target - model_output) ** 2)

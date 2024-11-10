@@ -4,35 +4,35 @@ import torch
 from pydantic import BaseModel
 from einops import rearrange
 
-from ._dit import DiT, DiT_models
+from ._unet import UNet_models
 from ..diffusion import create_diffusion, SpacedDiffusion, DiffusionConfig
 from ...utils import ema_to_model_state_dict
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 
 from ..vae import VideoVAEConfig, vae_models
-    
 
-class NextFrameDiTModelConfig(BaseModel):
+
+class NextFrameUNetModelConfig(BaseModel):
     vae_type: Literal["vae-tiny", "vae-small", "vae-base", "vae-large"] = "vae-tiny"
     vae_kwargs: dict[str, Any] = {}
     vae_checkpoint_path: str | None = None
     latent_scale_factor: float = 0.18215
-    dit_type: Literal['DiT_T_1', 'DiT_T_2', 'DiT_M_1', 'DiT_M_2'] = "DiT_T_1"
-    dit_kwargs: dict[str, Any] = {}
+    unet_type: Literal["UNet_B", "UNet_S", "UNet_T", "UNet_M"] = "UNet_M"
+    unet_kwargs: dict[str, Any] = {}
     timestep_respacing: str = ""
     diffusion_steps: int = 1000
     device: Literal["cpu", "cuda"] = "cuda"
 
 
-class NextFrameDiTModel(nn.Module):
+class NextFrameUNetModel(nn.Module):
     def __init__(
         self,
         vae_type: Literal["vae-tiny", "vae-small", "vae-base", "vae-large"] = "vae-tiny",
         vae_kwargs: dict = {},
         vae_checkpoint_path: str | None = None,
         latent_scale_factor: float = 0.18215,
-        dit_type: Literal['DiT_T_1', 'DiT_T_2', 'DiT_M_1', 'DiT_M_2'] = "DiT_T_1",
-        dit_kwargs: dict = {},
+        unet_type: Literal["UNet_B", "UNet_S", "UNet_T", "UNet_M"] = "UNet_M",
+        unet_kwargs: dict = {},
         timestep_respacing: str = "",
         diffusion_steps: int = 1000,
         device: Literal["cpu", "cuda"] = "cuda"
@@ -49,13 +49,14 @@ class NextFrameDiTModel(nn.Module):
         else:
             self.vae = None
             
-        self.dit = DiT_models[dit_type](**dit_kwargs)
-        self.dit.initialize_weights()
+        self.unet = UNet_models[unet_type](**unet_kwargs)
         
-        self.diffusion = create_diffusion(
+        self.train_diffusion = create_diffusion(
+            **DiffusionConfig().model_dump()
+        )
+        self.sampling_diffusion = create_diffusion(
             **DiffusionConfig(
-                timestep_respacing=timestep_respacing,
-                diffusion_steps=diffusion_steps,
+                timestep_respacing=timestep_respacing,    
             ).model_dump()
         )
         
@@ -82,7 +83,7 @@ class NextFrameDiTModel(nn.Module):
         model_kwargs = dict(x_context=x_context, y=None)
         t = torch.randint(0, self.diffusion.num_timesteps, (x.shape[0],), device=self.device)
         
-        loss_dict = self.diffusion.training_losses(self.dit, x, t, model_kwargs=model_kwargs)
+        loss_dict = self.diffusion.training_losses(self.unet, x, t, model_kwargs=model_kwargs)
         loss = loss_dict["loss"].mean()
         
         return loss
@@ -94,7 +95,7 @@ class NextFrameDiTModel(nn.Module):
         model_kwargs = dict(x_context=x_context, y=None)
         
         samples = self.diffusion.ddim_sample_loop(
-            self.dit, x.shape, x, clip_denoised=False, model_kwargs=model_kwargs, progress=False, device=self.device
+            self.unet, x.shape, x, clip_denoised=False, model_kwargs=model_kwargs, progress=False, device=self.device
         )
         
         return samples

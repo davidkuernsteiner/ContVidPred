@@ -4,11 +4,23 @@
 #     IDDPM: https://github.com/openai/improved-diffusion/blob/main/improved_diffusion/gaussian_diffusion.py
 
 from typing import Literal
+from pydantic import BaseModel
 import torch
 
 from . import gaussian_diffusion as gd
 from .respace import SpacedDiffusion, space_timesteps
 from .diffusion_utils import enforce_zero_terminal_snr
+
+
+class DiffusionConfig(BaseModel):
+    timestep_respacing: str = ""
+    noise_schedule: str = "linear"
+    use_kl: bool = False
+    predict_target: Literal["epsilon", "velocity", "xstart", "xprev"] = "velocity"
+    sigma_type: Literal["fixed_small", "fixed_large", "learned"] = "fixed_small"
+    rescale_learned_sigmas: bool = False
+    rescale_betas_zero_snr: bool = True
+    diffusion_steps: int = 1000
 
 
 def create_diffusion(
