@@ -49,7 +49,7 @@ def model_output_to_image(x: torch.Tensor):
 
 
 def model_output_to_video(x: torch.Tensor):
-    return rearrange(min_max_normalize(x).detach().cpu() * 255, "t c h w -> t h w c").to(torch.uint8)
+    return (min_max_normalize(x).detach().cpu().numpy() * 255).astype("uint8")
 
 
 def display_video_frames_in_grid(video: torch.Tensor):

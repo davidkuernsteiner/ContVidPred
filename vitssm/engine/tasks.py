@@ -63,7 +63,7 @@ class VAEEngine(ModelEngine):
         return {"loss": _loss.item(), "recon_loss": _recon_loss.item(), "kl_loss": _kl_loss.item()}
     
     
-class DiTNextFrameEngine(ModelEngine):
+class NextFrameDiTEngine(ModelEngine):
     
     def __init__(self, model: NextFrameDiTModel, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
@@ -126,7 +126,7 @@ class UncondUNetEngine(ModelEngine):
         wandb.log(eval_outs, step=step)
         
 
-class UNetNextFrameEngine(ModelEngine):
+class NextFrameUNetEngine(ModelEngine):
     
     def __init__(self, model: NextFrameUNetModel, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
@@ -157,7 +157,7 @@ class UNetNextFrameEngine(ModelEngine):
     def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
         wandb.log(eval_outs, step=step)
 
-class UPTNextFrameEngine(ModelEngine):
+class NextFrameUPTEngine(ModelEngine):
         
         def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
             super().__init__(model, run_object)

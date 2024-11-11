@@ -120,7 +120,7 @@ class NextFrameUNetModel(nn.Module):
         
         frames = []
         for _ in range(n_steps):
-            frame = self._sample_frame_latents(x_context).unsqueeze(1)
+            frame = self._sample_frame(x_context, alpha_cond_aug).unsqueeze(1)
             frames.append(frame)
             x_context = torch.cat((x_context[:, 1:], frame), dim=1)
         
@@ -141,7 +141,7 @@ class NextFrameUNetModel(nn.Module):
         
         return x_cond, alpha_buckets
     
-    def _sample_frame_latents(self, x_context: Tensor, alpha_cond_aug: float) -> Tensor:
+    def _sample_frame(self, x_context: Tensor, alpha_cond_aug: float) -> Tensor:
         n, t, c, h, w = x_context.shape
         x = torch.randn(n, c, h, w, device=self.device)
         x_context = rearrange(x_context, "n t c h w -> n (t c) h w")

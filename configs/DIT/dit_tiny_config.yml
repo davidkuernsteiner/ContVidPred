@@ -15,7 +15,7 @@ dataset:
   num_frames: 5
   context_length: 4
   frame_interval: 1
-  resolution: 16
+  resolution: 32
   train_percentage: 0.90
   num_workers: 8
   pin_memory: True

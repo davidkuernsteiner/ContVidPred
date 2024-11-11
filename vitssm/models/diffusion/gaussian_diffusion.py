@@ -333,6 +333,7 @@ class GaussianDiffusion:
             "variance": model_variance,
             "log_variance": model_log_variance,
             "pred_xstart": pred_xstart,
+            "model_output": model_output,
             "extra": extra,
         }
 
@@ -552,7 +553,12 @@ class GaussianDiffusion:
 
         # Usually our model outputs epsilon, but we re-derive it
         # in case we used x_start or x_prev prediction.
-        eps = self._predict_eps_from_xstart(x, t, out["pred_xstart"])
+        if self.model_mean_type == ModelMeanType.VELOCITY:
+            eps = self._predict_eps_from_v(x, t, out["model_output"])
+        elif self.model_mean_type == ModelMeanType.START_X:
+            eps = self._predict_eps_from_xstart(x, t, out["pred_xstart"])
+        else:
+            eps = out["model_output"] 
 
         alpha_bar = _extract_into_tensor(self.alphas_cumprod, t, x.shape)
         alpha_bar_prev = _extract_into_tensor(self.alphas_cumprod_prev, t, x.shape)
