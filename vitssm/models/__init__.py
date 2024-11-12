@@ -26,6 +26,16 @@ def build_model(config: DictConfig) -> Module:
             model_config = NextFrameDiTModelConfig(**config)
             model = NextFrameDiTModel(**model_config.model_dump())
             return model
+        
+        case "unet":
+            model_config = UncondUNetModelConfig(**config)
+            model = UncondUNetModel(**model_config.model_dump())
+            return model
+        
+        case "unet_next_frame":
+            model_config = NextFrameUNetModelConfig(**config)
+            model = NextFrameUNetModel(**model_config.model_dump())
+            return model
 
         case _:
             raise ValueError(f"Model {config.name} not supported.")

@@ -1,0 +1,76 @@
+project: 'ViTSSM'
+group: 'UNET'
+name: 'vmdsprites-UNet_M-32'
+tags: ['unet', 'vmdsprites', 'micro', 'ema']
+log_freq: 50
+eval_freq: 20
+checkpoint_freq: 9999999999999
+seed: 420
+
+dataset:
+  name: 'vmdsprites-nextframe'
+  mode: 'train'
+  fold: '0'
+  output_format: 'TCHW'
+  num_frames: 5
+  context_length: 4
+  frame_interval: 1
+  resolution: 32
+  train_percentage: 1.0
+  num_workers: 8
+  pin_memory: True
+  batch_size: 128
+  val_batch_size: 32
+  rollout_length: 16
+
+optimization:
+  loss:
+    name: 'MSELoss'
+    kwargs: {}
+  optimizer:
+    name: 'AdamW'
+    kwargs: {lr: 0.0001,
+             weight_decay: 0.0}
+  scheduler:
+    name: 'LambdaLR'
+    kwargs: {warmup_steps: 1000,
+             decay_steps: 9000,
+             gamma: 1.0}
+    step_on_batch: True
+  #scheduler:
+  #  name: 'StepLR'
+  #  kwargs: {step_size: 1, gamma: 1.0}
+  #  step_on_batch: False
+  steps: 10000
+
+metrics:
+  SSIM:
+    name: 'StructuralSimilarityIndexMeasure'
+    kwargs: {}
+  PSNR:
+    name: 'PeakSignalNoiseRatio'
+    kwargs: {}
+
+model:
+  name: 'unet'
+  device: 'cuda'
+  use_amp: False
+  use_ema: True
+  ema_steps: 1
+
+  vae_type: "vae-tiny"
+  vae_checkpoint_path: Null
+  unet_type: "UNet_M"
+  unet_kwargs: {
+    sample_size: 32,
+    in_channels: 15,
+    out_channels: 3,
+    num_class_embeds: 11,
+  }
+  diffusion_steps: 1000
+  timestep_respacing: "trailing4"
+  noise_augmentation_scale: 0.7
+  noise_augmentation_buckets: 10
+  cfg_dropout: 0.1
+  cfg_scale: 1.5
+  cfg_rescale_factor: 0.7

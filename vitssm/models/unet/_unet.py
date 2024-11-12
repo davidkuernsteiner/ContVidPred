@@ -64,7 +64,8 @@ def UNet_B(**kwargs):
         up_block_types=("UpBlock2D", "AttnUpBlock2D", "AttnUpBlock2D"),
         block_out_channels=(128, 256, 512),
         layers_per_block=2,
-        cross_attention_dim=512,
+        attention_head_dim=4,
+        norm_num_groups=16,
         **kwargs,
     )
 
@@ -75,29 +76,32 @@ def UNet_S(**kwargs):
         up_block_types=("UpBlock2D", "AttnUpBlock2D", "AttnUpBlock2D"),
         block_out_channels=(64, 128, 256),
         layers_per_block=2,
-        cross_attention_dim=256,
+        attention_head_dim=4,
+        norm_num_groups=16,
         **kwargs,
     )
 
 def UNet_T(**kwargs):
     return UNet2DNextFrameModel(
-        down_block_types=("AttnDownBlock2D", "DownBlock2D",),
+        down_block_types=("DownBlock2D", "AttnDownBlock2D", ),
         mid_block_type="UNetMidBlock2D",
-        up_block_types=("UpBlock2D", "AttnUpBlock2D"),
-        block_out_channels=(128, 256),
+        up_block_types=("AttnUpBlock2D", "UpBlock2D"),
+        block_out_channels=(64, 128),
         layers_per_block=2,
-        cross_attention_dim=256,
+        attention_head_dim=4,
+        norm_num_groups=16,
         **kwargs,
     )
 
 def UNet_M(**kwargs):
     return UNet2DNextFrameModel(
-        down_block_types=("AttnDownBlock2D", "DownBlock2D",),
+        down_block_types=("DownBlock2D", "AttnDownBlock2D", ),
         mid_block_type="UNetMidBlock2D",
-        up_block_types=("UpBlock2D", "AttnUpBlock2D"),
-        block_out_channels=(64, 128),
-        layers_per_block=1,
-        cross_attention_dim=128,
+        up_block_types=("AttnUpBlock2D", "UpBlock2D"),
+        block_out_channels=(32, 64),
+        layers_per_block=2,
+        attention_head_dim=2,
+        norm_num_groups=16,
         **kwargs,
     )
     

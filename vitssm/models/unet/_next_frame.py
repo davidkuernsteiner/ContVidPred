@@ -19,8 +19,13 @@ class NextFrameUNetModelConfig(BaseModel):
     latent_scale_factor: float = 0.18215
     unet_type: Literal["UNet_B", "UNet_S", "UNet_T", "UNet_M"] = "UNet_M"
     unet_kwargs: dict[str, Any] = {}
-    timestep_respacing: str = ""
     diffusion_steps: int = 1000
+    timestep_respacing: str = ""
+    noise_augmentation_scale: float = 0.7
+    noise_augmentation_buckets: int = 10
+    cfg_dropout: float = 0.1
+    cfg_scale: float = 7.5
+    cfg_rescale_factor: float = 0.7
     device: Literal["cpu", "cuda"] = "cuda"
 
 
@@ -33,13 +38,14 @@ class NextFrameUNetModel(nn.Module):
         latent_scale_factor: float = 0.18215,
         unet_type: Literal["UNet_B", "UNet_S", "UNet_T", "UNet_M"] = "UNet_M",
         unet_kwargs: dict = {},
-        timestep_respacing: str = "",
-        device: Literal["cpu", "cuda"] = "cuda",
+        diffusion_steps: int = 1000,
+        timestep_respacing: str = "trailing4",
         noise_augmentation_scale: float = 0.7,
         noise_augmentation_buckets: int = 10,
         cfg_dropout: float = 0.1,
         cfg_scale: float = 7.5,
         cfg_rescale_factor: float = 0.7,
+        device: Literal["cpu", "cuda"] = "cuda",
     ):
         super().__init__()
         
@@ -56,11 +62,19 @@ class NextFrameUNetModel(nn.Module):
         self.unet = UNet_models[unet_type](**unet_kwargs)
         
         self.train_diffusion = create_diffusion(
-            **DiffusionConfig().model_dump()
+            **DiffusionConfig(
+                timestep_respacing="",
+                predict_target="velocity",
+                rescale_betas_zero_snr=True,
+                diffusion_steps=diffusion_steps
+            ).model_dump()
         )
         self.sampling_diffusion = create_diffusion(
             **DiffusionConfig(
-                timestep_respacing=timestep_respacing,    
+                timestep_respacing=timestep_respacing,
+                predict_target="velocity",
+                rescale_betas_zero_snr=True,
+                diffusion_steps=diffusion_steps  
             ).model_dump()
         )
         
