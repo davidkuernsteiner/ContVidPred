@@ -114,9 +114,9 @@ class NextFrameUNetModel(nn.Module):
         alpha_buckets[drop_idcs] = self.noise_augmentation_buckets
         
         model_kwargs = dict(context=x_context, class_labels=alpha_buckets)
-        t = torch.randint(0, self.diffusion.num_timesteps, (x.shape[0],), device=self.device)
+        t = torch.randint(0, self.train_diffusion.num_timesteps, (x.shape[0],), device=self.device)
         
-        loss_dict = self.diffusion.training_losses(self.unet, x, t, model_kwargs=model_kwargs)
+        loss_dict = self.train_diffusion.training_losses(self.unet, x, t, model_kwargs=model_kwargs)
         loss = loss_dict["loss"].mean()
         
         return loss
@@ -153,25 +153,27 @@ class NextFrameUNetModel(nn.Module):
         bins = torch.linspace(0., self.noise_augmentation_scale, self.noise_augmentation_buckets + 1, device=self.device)
         alpha_buckets = torch.bucketize(alpha_cond_aug, bins, right=True) - 1
         
-        return x_cond, alpha_buckets
+        return x_cond, alpha_buckets.squeeze()
     
     def _sample_frame(self, x_context: Tensor, alpha_cond_aug: float) -> Tensor:
         n, t, c, h, w = x_context.shape
         x = torch.randn(n, c, h, w, device=self.device)
         x_context = rearrange(x_context, "n t c h w -> n (t c) h w")
+        x_context.shape
         
         #Noise Augmentation
         x_context, alpha_buckets = self._cond_augmentation_from_alpha(x_context, torch.ones(n, 1, 1, 1, device=self.device) * alpha_cond_aug)
         
         # cfg
         x = torch.cat([x, x], 0)
+        x_context = torch.cat([x_context, x_context], 0)
         alpha_buckets_null = torch.tensor([self.noise_augmentation_buckets] * n, device=self.device)
         alpha_buckets = torch.cat([alpha_buckets, alpha_buckets_null], 0)
         
         model_kwargs = dict(context=x_context, class_labels=alpha_buckets, cfg_scale=self.cfg_scale, cfg_rescale_factor=self.cfg_rescale_factor)
         
-        samples = self.diffusion.ddim_sample_loop(
-            self.unet.forward_with_cfg, x.shape, x, clip_denoised=False, model_kwargs=model_kwargs, progress=False, device=self.device
+        samples = self.sampling_diffusion.ddim_sample_loop(
+            self.unet.forward_with_cfg, x.shape, x, clip_denoised=True, model_kwargs=model_kwargs, progress=False, device=self.device
         )
         
-        return samples
+        return torch.split(samples, len(samples) // 2, dim=0)[0]

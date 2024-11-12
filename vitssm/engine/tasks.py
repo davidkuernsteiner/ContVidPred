@@ -14,7 +14,7 @@ from ..models import UncondUNetModel, NextFrameUNetModel, NextFrameDiTModel
 from ..models.vae import frange_cycle_linear
 from ..utils.metrics import RolloutMetricCollectionWrapper
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
-from latte.utils import clip_grad_norm_	
+#from latte.utils import clip_grad_norm_	
     
     
 class VAEEngine(ModelEngine):
@@ -148,7 +148,7 @@ class NextFrameUNetEngine(ModelEngine):
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _frames = self.eval_model.rollout_frames(_x, _y.shape[1])
+            _frames = self.eval_model.rollout_frames(_x, _y.shape[1], alpha_cond_aug=0.0)
         self.metrics.update(_frames, _y)
         
         return {}

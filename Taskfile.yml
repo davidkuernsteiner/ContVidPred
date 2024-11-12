@@ -22,7 +22,6 @@ tasks:
         cmds:
             - $CONDA env create --file env.yml --yes
             - $CONDA run -n {{.LIBRARY}} pip install -U xformers --index-url https://download.pytorch.org/whl/cu121
-            - $CONDA run -n {{.LIBRARY}} pip install -e libs/latte
             - $CONDA run -n {{.LIBRARY}} pip install -e .
 
     env-remove:

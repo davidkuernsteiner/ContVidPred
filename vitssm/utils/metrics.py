@@ -30,8 +30,8 @@ class RolloutMetricCollectionWrapper:
         
     def update(self, x: Tensor, y: Tensor) -> None:
         sample_idx = random.randint(0, x.size(0) - 1)
-        self.sample_frames = model_output_to_video(x.clone()[sample_idx])
-        self.sample_frames_pred = model_output_to_video(y.clone()[sample_idx])
+        self.sample_frames_pred = model_output_to_video(x.clone()[sample_idx])
+        self.sample_frames = model_output_to_video(y.clone()[sample_idx])
         x, y = rearrange(x, "n t ... -> t n ..."), rearrange(y, "n t ... -> t n ...")
         res = {timestep + 1: self.metrics(_x, _y) for timestep, (_x, _y) in enumerate(zip(x, y))}
         res = DataFrame(res).T.map(lambda x: x.item())

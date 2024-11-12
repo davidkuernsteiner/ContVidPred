@@ -352,10 +352,10 @@ class GaussianDiffusion:
     def _predict_v_from_eps_xstart(self, x_t, t, pred_xstart, eps):
         return _extract_into_tensor(self.alphas_cumprod, t, x_t.shape).sqrt() * eps - (1 - _extract_into_tensor(self.alphas_cumprod, t, x_t.shape)).sqrt() * pred_xstart
     
-    def _predict_eps_from_v(self, v, x_t, t):
+    def _predict_eps_from_v(self, x_t, t, v):
         return _extract_into_tensor(self.alphas_cumprod, t, x_t.shape).sqrt() * v + (1 - _extract_into_tensor(self.alphas_cumprod, t, x_t.shape)).sqrt() * x_t
     
-    def _predict_xstart_from_v(self, v, x_t, t):
+    def _predict_xstart_from_v(self, x_t, t, v):
         return _extract_into_tensor(self.alphas_cumprod, t, x_t.shape).sqrt() * x_t - (1 - _extract_into_tensor(self.alphas_cumprod, t, x_t.shape)).sqrt() * v
 
     def condition_mean(self, cond_fn, p_mean_var, x, t, model_kwargs=None):
