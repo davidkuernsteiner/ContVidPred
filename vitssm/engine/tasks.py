@@ -70,6 +70,7 @@ class NextFrameDiTEngine(ModelEngine):
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, _context_frames: Tensor, _next_frame: Tensor) -> dict[str, float]:
+        self.optimizer.zero_grad()
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _loss = self.model.forward_train(_context_frames, _next_frame)
             
@@ -101,6 +102,7 @@ class UncondUNetEngine(ModelEngine):
         super().__init__(model, run_object)
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        self.optimizer.zero_grad()
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _loss = self.model.forward_train(_x)
             
@@ -133,6 +135,7 @@ class NextFrameUNetEngine(ModelEngine):
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, _context_frames: Tensor, _next_frame: Tensor) -> dict[str, float]:
+        self.optimizer.zero_grad()
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _loss = self.model.forward_train(_context_frames, _next_frame)
             
