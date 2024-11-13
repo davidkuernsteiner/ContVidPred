@@ -47,8 +47,10 @@ class RolloutMetricCollectionWrapper:
             metrics[metric] = wandb.plot.line(table, x="step", y=metric, title=f"{metric} over rollout steps")
         
         sample_frames = {
-            "ground_truth": wandb.Video(self.sample_frames, fps=4), 
-            "prediction": wandb.Video(self.sample_frames_pred, fps=4),
+            "rollout: ground truth vs. prediction": [
+                wandb.Video(self.sample_frames,fps=4),
+                wandb.Video(self.sample_frames_pred, fps=4),
+            ],
         }
             
         return metrics | sample_frames

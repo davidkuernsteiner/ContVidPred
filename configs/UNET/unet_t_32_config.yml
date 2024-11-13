@@ -3,7 +3,7 @@ group: 'UNET'
 name: 'vmdsprites-UNet_T-32'
 tags: ['unet', 'vmdsprites', 'micro', 'ema']
 log_freq: 50
-eval_freq: 100
+eval_freq: 25
 checkpoint_freq: 9999999999999
 seed: 420
 
@@ -19,8 +19,8 @@ dataset:
   train_percentage: 1.0
   num_workers: 4
   pin_memory: True
-  batch_size: 64
-  val_batch_size: 16
+  batch_size: 128
+  val_batch_size: 32
   rollout_length: 16
 
 optimization:
@@ -28,7 +28,7 @@ optimization:
     name: 'MSELoss'
     kwargs: {}
   optimizer:
-    name: 'Adam'
+    name: 'AdamW'
     kwargs: {lr: 0.0001,
              weight_decay: 0.0}
   scheduler:
@@ -53,7 +53,7 @@ model:
   name: 'unet_next_frame'
   device: 'cuda'
   use_amp: False
-  use_ema: False
+  use_ema: True
   ema_steps: 1
 
   vae_type: "vae-tiny"
@@ -66,7 +66,7 @@ model:
     num_class_embeds: 11,
   }
   diffusion_steps: 1000
-  timestep_respacing: "trailing25"
+  timestep_respacing: "trailing4"
   noise_augmentation_scale: 0.7
   noise_augmentation_buckets: 10
   cfg_dropout: 0.1
