@@ -1,2 +1,2 @@
 from ._uncond import UncondUNetModel, UncondUNetModelConfig
-from ._next_frame import NextFrameUNetModel, NextFrameUNetModelConfig
+from ._next_frame import NextFrameUNetModel, NextFrameUNetModelConfig, BasicNextFrameUNetModel, BasicNextFrameUNetModelConfig

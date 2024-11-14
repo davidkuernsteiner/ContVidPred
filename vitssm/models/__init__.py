@@ -6,7 +6,7 @@ from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 from .vae import VideoVAEConfig
 #from .latte import LatteDiffusionModelConfig, LatteDiffusionModel
 from .dit import NextFrameDiTModelConfig, NextFrameDiTModel
-from .unet import UncondUNetModel, UncondUNetModelConfig, NextFrameUNetModel, NextFrameUNetModelConfig
+from .unet import UncondUNetModel, UncondUNetModelConfig, NextFrameUNetModel, NextFrameUNetModelConfig, BasicNextFrameUNetModel, BasicNextFrameUNetModelConfig
 
 
 def build_model(config: DictConfig) -> Module:
@@ -35,6 +35,11 @@ def build_model(config: DictConfig) -> Module:
         case "unet_next_frame":
             model_config = NextFrameUNetModelConfig(**config)
             model = NextFrameUNetModel(**model_config.model_dump())
+            return model
+        
+        case "basic_unet_next_frame":
+            model_config = BasicNextFrameUNetModelConfig(**config)
+            model = BasicNextFrameUNetModel(**model_config.model_dump())
             return model
 
         case _:
