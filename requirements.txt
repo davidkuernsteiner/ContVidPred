@@ -2,8 +2,11 @@ torch
 torchvision
 torchmetrics
 diffusers[torch]
+omegaconf
 pandas
 wandb
 wandb[media]
 einops
 opencv-python
+python-dotenv
+pydantic
