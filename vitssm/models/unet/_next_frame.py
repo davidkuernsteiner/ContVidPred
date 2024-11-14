@@ -302,9 +302,8 @@ class BasicNextFrameUNetModel(nn.Module):
         n, t, c, h, w = x_context.shape
         x = torch.randn(n, c, h, w, device=self.device)
         x_context = rearrange(x_context, "n t c h w -> n (t c) h w")
-        x_context.shape
         
-        model_kwargs = dict(context=x_context, class_labels=None, cfg_scale=self.cfg_scale)
+        model_kwargs = dict(context=x_context, class_labels=None)
         
         samples = self.sampling_diffusion.ddim_sample_loop(
             self.unet, x.shape, x, clip_denoised=True, model_kwargs=model_kwargs, progress=False, device=self.device
