@@ -94,7 +94,7 @@ class ModelEngine:
             self.model.to(self.device)
             self.model.train()
             
-            for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state["epoch"]}"):
+            for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state['epoch']}"):
                 train_outs = self._train_step(x.to(self.device), y.to(self.device))
                 self.state["step"] += 1
                 
