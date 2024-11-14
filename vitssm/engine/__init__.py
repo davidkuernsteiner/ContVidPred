@@ -41,7 +41,9 @@ class ModelEngine:
         self.device = torch.device(self.config.model.get("device", "cuda" if torch.cuda.is_available() else "cpu"))
         self.use_amp = self.config.model.get("use_amp", True)
 
-        self.model = model.to(self.device)            
+        self.model = model.to(self.device)
+        for p in self.model.parameters():
+            p.register_hook(lambda grad: torch.clamp(grad, -1., 1.))     
         self.optimizer = get_optimizer(model, self.config)
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
         
