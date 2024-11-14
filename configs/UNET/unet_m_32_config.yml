@@ -3,12 +3,13 @@ group: 'UNET'
 name: 'vmdsprites-UNet_M-32'
 tags: ['unet', 'vmdsprites', 'micro', 'ema']
 log_freq: 50
-eval_freq: 50
+eval_freq: 20
 checkpoint_freq: 9999999999999
 seed: 420
 
 dataset:
   name: 'vmdsprites-nextframe'
+  load_in_memory: True
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
@@ -18,9 +19,10 @@ dataset:
   resolution: 32
   train_percentage: 1.0
   num_workers: 8
+  persistent_workers: True
   pin_memory: True
   batch_size: 64
-  val_batch_size: 32
+  val_batch_size: 64
   rollout_length: 16
 
 optimization:
@@ -33,15 +35,15 @@ optimization:
              weight_decay: 0.01}
   scheduler:
     name: 'LambdaLR'
-    kwargs: {warmup_steps: 5000,
-             decay_steps: 95000,
-             gamma: 0.1}
+    kwargs: {warmup_steps: 1000,
+             decay_steps: 9000,
+             gamma: 1.0}
     step_on_batch: True
   #scheduler:
   #  name: 'StepLR'
   #  kwargs: {step_size: 1, gamma: 1.0}
   #  step_on_batch: False
-  steps: 100000
+  steps: 10000
 
 metrics:
   SSIM:
@@ -55,7 +57,7 @@ model:
   name: 'unet_next_frame'
   device: 'cuda'
   use_amp: False
-  use_ema: True
+  use_ema: False
   ema_steps: 1
 
   vae_type: "vae-tiny"

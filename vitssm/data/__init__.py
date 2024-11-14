@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import HMDB51, UCF101, Kinetics, MovingMNIST, VisionDataset
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, InterpolationMode
 
-from .datasets import AEDatasetWrapper, NextFrameDatasetWrapper, ImageDataset, VideoDataset
+from .datasets import AEDatasetWrapper, NextFrameDatasetWrapper, ImageDataset, VideoDataset, MemoryVideoDataset
 from .utils import get_transforms_video
 
 
@@ -65,28 +65,49 @@ def get_dataset(config: DictConfig) -> Any:
             fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
             res = config.get("resolution", 64)
             
-            return VideoDataset(
-                data_path=str(data_root / "VMDsprites" / "folds" / fold),
-                num_frames=config.get("num_frames", 10),
-                frame_interval=config.get("frame_interval", 1),
-                image_size=(res, res),
-                transform_name=config.get("transform_name", "center"),
-            )
-
-        case "vmdsprites-nextframe":
-            fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
-            res = config.get("resolution", 64)
-            
-            return NextFrameDatasetWrapper(
-                VideoDataset(
+            if config.get("load_in_memory", True):
+                return MemoryVideoDataset(
                     data_path=str(data_root / "VMDsprites" / "folds" / fold),
                     num_frames=config.get("num_frames", 10),
                     frame_interval=config.get("frame_interval", 1),
                     image_size=(res, res),
                     transform_name=config.get("transform_name", "center"),
-                ),
-                context_length=config.get("context_length", 1),
-            )
+                )
+            else:
+                return VideoDataset(
+                    data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                    num_frames=config.get("num_frames", 10),
+                    frame_interval=config.get("frame_interval", 1),
+                    image_size=(res, res),
+                    transform_name=config.get("transform_name", "center"),
+                )
+
+        case "vmdsprites-nextframe":
+            fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
+            res = config.get("resolution", 64)
+            
+            if config.get("load_in_memory", True):
+                return NextFrameDatasetWrapper(
+                    MemoryVideoDataset(
+                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        num_frames=config.get("num_frames", 10),
+                        frame_interval=config.get("frame_interval", 1),
+                        image_size=(res, res),
+                        transform_name=config.get("transform_name", "center"),
+                    ),
+                    context_length=config.get("context_length", 1),
+                )
+            else:
+                return NextFrameDatasetWrapper(
+                    VideoDataset(
+                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        num_frames=config.get("num_frames", 10),
+                        frame_interval=config.get("frame_interval", 1),
+                        image_size=(res, res),
+                        transform_name=config.get("transform_name", "center"),
+                    ),
+                    context_length=config.get("context_length", 1),
+                )
 
         case _:
             raise ValueError(f"Unknown dataset: {config.name}")
@@ -109,6 +130,7 @@ def get_dataloaders(
             shuffle=True,
             num_workers=config.get("num_workers", 1),
             pin_memory=config.get("pin_memory", False),
+            persistent_workers=config.get("persistent_workers", False),
         )
         val_loader = DataLoader(
             val_set,
@@ -116,6 +138,7 @@ def get_dataloaders(
             shuffle=False,
             num_workers=config.get("num_workers", 1),
             pin_memory=config.get("pin_memory", False),
+            persistent_workers=config.get("persistent_workers", False),
         )
 
         return train_loader, val_loader
@@ -126,6 +149,7 @@ def get_dataloaders(
         shuffle=False,
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
+        persistent_workers=config.get("persistent_workers", False),
     )
 
 
@@ -145,6 +169,7 @@ def get_dataloaders_next_frame(
         shuffle=True,
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
+        persistent_workers=config.get("persistent_workers", False),
     )
     
     eval_loader = DataLoader(
@@ -153,6 +178,7 @@ def get_dataloaders_next_frame(
         shuffle=False,
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
+        persistent_workers=config.get("persistent_workers", False),
     )
     
     return train_loader, eval_loader

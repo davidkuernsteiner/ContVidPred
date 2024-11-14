@@ -9,7 +9,6 @@ import torch
 from einops import rearrange
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.video_utils import VideoClips
-from torchvision.io import read_video
 from torchvision.tv_tensors import Video
 from glob import glob
 
@@ -25,7 +24,7 @@ from .utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, r
 class AEDatasetWrapper:  
         def __init__(
             self,
-            dataset: VisionDataset,
+            dataset: torch.utils.data.Dataset,
             return_y: bool = False,
         ) -> None:
             super().__init__()
@@ -44,7 +43,7 @@ class AEDatasetWrapper:
 class NextFrameDatasetWrapper:
     def __init__(
         self,
-        dataset: VisionDataset,
+        dataset: torch.utils.data.Dataset,
         context_length: int = 1,
     ) -> None:
         super().__init__()
@@ -74,7 +73,7 @@ class VideoDataset(torch.utils.data.Dataset):
         data_path: str | None = None,
         num_frames: int = 16,
         frame_interval: int = 1,
-        image_size: tuple[int, int] = (256, 256),
+        image_size: tuple[int, int] = (32, 32),
         transform_name: str = "center",
     ):
         self.data_path = data_path
@@ -88,8 +87,7 @@ class VideoDataset(torch.utils.data.Dataset):
         sample = self.data.iloc[index]
         path = sample["path"]
         # loading
-        vframes, vinfo = read_video(path, backend="cv2")
-        video_fps = vinfo["video_fps"] if "video_fps" in vinfo else 24
+        vframes, _ = read_video(path, backend="cv2")
         # Sampling video frames
         video = temporal_random_crop(vframes, self.num_frames, self.frame_interval)
         # transform
@@ -108,6 +106,50 @@ class VideoDataset(torch.utils.data.Dataset):
                 print(f"data {path}: {e}")
                 index = np.random.randint(len(self))
         raise RuntimeError("Too many bad data.")
+
+    def __len__(self):
+        return len(self.data)
+    
+    
+class MemoryVideoDataset(torch.utils.data.Dataset):
+    """load video according to the csv file.
+
+    Args:
+        target_video_len (int): the number of video frames will be load.
+        align_transform (callable): Align different videos in a specified size.
+        temporal_sample (callable): Sample the target length of a video.
+    """
+    def __init__(
+        self,
+        data_path: str | None = None,
+        num_frames: int = 16,
+        frame_interval: int = 1,
+        image_size: tuple[int, int] = (32, 32),
+        transform_name: str = "center",
+    ):
+        self.data_path = data_path
+        self.paths = read_file(data_path)
+        self.num_frames = num_frames
+        self.frame_interval = frame_interval
+        self.image_size = image_size
+        self.transforms = get_transforms_video(transform_name, image_size)
+        
+        self.data = []
+        for path in self.paths["path"]:
+            vframes, _ = read_video(path, backend="cv2")
+            self.data.append(vframes)
+            
+
+    def __getitem__(self, index: int):
+        sample = self.data[index]
+        # Sampling video frames
+        video = temporal_random_crop(sample, self.num_frames, self.frame_interval)
+        # transform
+        video = self.transforms(video)  # T C H W
+        # TCHW -> CTHW
+        #video = video.permute(1, 0, 2, 3)
+
+        return video
 
     def __len__(self):
         return len(self.data)
