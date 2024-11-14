@@ -61,8 +61,8 @@ class ModelEngine:
             self.ema = AveragedModel(
                 self.model,
                 device=self.device,
-                multi_avg_fn=get_ema_multi_avg_fn(0.999),
-                use_buffers=True
+                multi_avg_fn=get_ema_multi_avg_fn(0.9999),
+                use_buffers=True,
             )
             self.eval_model = self.ema.module
         else:
@@ -119,8 +119,6 @@ class ModelEngine:
                     self._save_checkpoint()
                 
             if (self.state["epoch"] % self.eval_freq == 0) or done:
-                if self.use_ema:
-                    update_bn(train_dataloader, self.ema, device=self.device)
                 self.model.cpu()
                 self.eval_model.to(self.device)
                 self.eval_model.eval()
@@ -185,7 +183,7 @@ class ModelEngine:
         
         checkpoint_path = os.path.join(save_dir, self.config.name + ".pth")
         torch.save(checkpoint, checkpoint_path)
-        wandb.link_model(path=checkpoint_path, registered_model_name=self.config.name)
+        #wandb.link_model(path=checkpoint_path, registered_model_name=self.config.name)
 
     def _resume_checkpoint(self) -> None:
         checkpoint_path = os.path.join(
