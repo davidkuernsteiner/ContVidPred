@@ -1,0 +1,9 @@
+torch
+torchvision
+torchmetrics
+diffusers[torch]
+pandas
+wandb
+wandb[media]
+einops
+opencv-python
