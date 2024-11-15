@@ -361,7 +361,7 @@ def DiT_T_1(**kwargs):
     return DiT(depth=4, hidden_size=128, patch_size=1, num_heads=2, **kwargs)
 
 def DiT_T_2(**kwargs):
-    return DiT(depth=4, hidden_size=128, patch_size=2, num_heads=2, **kwargs)
+    return DiT(depth=8, hidden_size=128, patch_size=2, num_heads=4, **kwargs)
 
 def DiT_M_1(**kwargs):
     return DiT(depth=2, hidden_size=64, patch_size=1, num_heads=1, **kwargs)

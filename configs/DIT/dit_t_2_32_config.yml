@@ -31,19 +31,19 @@ optimization:
     kwargs: {}
   optimizer:
     name: 'AdamW'
-    kwargs: {lr: 0.001,
+    kwargs: {lr: 0.0001,
              weight_decay: 0.01}
   scheduler:
     name: 'LambdaLR'
-    kwargs: {warmup_steps: 1000,
-             decay_steps: 9000,
-             gamma: 0.1}
+    kwargs: {warmup_steps: 5000,
+             decay_steps: 95000,
+             gamma: 1.0}
     step_on_batch: True
   #scheduler:
   #  name: 'StepLR'
   #  kwargs: {step_size: 1, gamma: 1.0}
   #  step_on_batch: False
-  steps: 10000
+  steps: 100000
 
 metrics:
   SSIM:
