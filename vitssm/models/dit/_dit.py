@@ -150,12 +150,10 @@ class DiT(nn.Module):
         mlp_ratio=4.0,
         class_dropout_prob=0.1,
         num_classes=1000,
-        learn_sigma=True,
     ):
         super().__init__()
-        self.learn_sigma = learn_sigma
         self.in_channels = in_channels
-        self.out_channels = out_channels * 2 if learn_sigma else in_channels
+        self.out_channels = out_channels
         self.patch_size = patch_size
         self.num_heads = num_heads
 
@@ -223,7 +221,7 @@ class DiT(nn.Module):
         imgs = x.reshape(shape=(x.shape[0], c, h * p, h * p))
         return imgs
 
-    def forward(self, x, t, y, x_context):
+    def forward(self, x, t, y, context):
         """
         Forward pass of DiT.
         x: (N, T, C, H, W) tensor of spatial inputs (images or latent representations of images)
@@ -231,7 +229,8 @@ class DiT(nn.Module):
         t: (N,) tensor of diffusion timesteps
         y: (N,) tensor of class labels
         """
-        x = torch.cat([x, x_context], dim=1)
+        if context is not None:
+            x = torch.cat((context, x), dim=1)
         #x = rearrange(x, "b t c h w -> b (t c) h w")
         x = self.x_embedder(x) + self.pos_embed  # (N, T, D), where T = H * W / patch_size ** 2
         t = self.t_embedder(t)                   # (N, D)
@@ -358,17 +357,17 @@ def DiT_S_4(**kwargs):
 def DiT_S_8(**kwargs):
     return DiT(depth=12, hidden_size=384, patch_size=8, num_heads=6, **kwargs)
 
-def DiT_M_1(**kwargs):
-    return DiT(depth=4, hidden_size=96, patch_size=1, num_heads=2, **kwargs)
-
-def DiT_M_2(**kwargs):
-    return DiT(depth=4, hidden_size=96, patch_size=2, num_heads=2, **kwargs)
-
 def DiT_T_1(**kwargs):
-    return DiT(depth=2, hidden_size=48, patch_size=1, num_heads=1, **kwargs)
+    return DiT(depth=4, hidden_size=128, patch_size=1, num_heads=2, **kwargs)
 
 def DiT_T_2(**kwargs):
-    return DiT(depth=2, hidden_size=48, patch_size=2, num_heads=1, **kwargs)
+    return DiT(depth=4, hidden_size=128, patch_size=2, num_heads=2, **kwargs)
+
+def DiT_M_1(**kwargs):
+    return DiT(depth=2, hidden_size=64, patch_size=1, num_heads=1, **kwargs)
+
+def DiT_M_2(**kwargs):
+    return DiT(depth=2, hidden_size=64, patch_size=2, num_heads=1, **kwargs)
 
 
 DiT_models = {

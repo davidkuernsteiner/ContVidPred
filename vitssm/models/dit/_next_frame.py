@@ -17,13 +17,15 @@ class NextFrameDiTModelConfig(BaseModel):
     vae_kwargs: dict[str, Any] = {}
     vae_checkpoint_path: str | None = None
     latent_scale_factor: float = 0.18215
-    dit_type: Literal['DiT_T_1', 'DiT_T_2', 'DiT_M_1', 'DiT_M_2'] = "DiT_T_1"
+    dit_type: Literal["UNet_B", "UNet_S", "UNet_T", "UNet_M"] = "UNet_M"
     dit_kwargs: dict[str, Any] = {}
-    timestep_respacing: str = ""
     diffusion_steps: int = 1000
+    timestep_respacing: str = "trailing25"
+    predict_target: Literal["epsilon", "velocity", "xstart", "xprev"] = "velocity"
+    rescale_betas_zero_snr: bool = True
     device: Literal["cpu", "cuda"] = "cuda"
-
-
+    
+    
 class NextFrameDiTModel(nn.Module):
     def __init__(
         self,
@@ -31,11 +33,13 @@ class NextFrameDiTModel(nn.Module):
         vae_kwargs: dict = {},
         vae_checkpoint_path: str | None = None,
         latent_scale_factor: float = 0.18215,
-        dit_type: Literal['DiT_T_1', 'DiT_T_2', 'DiT_M_1', 'DiT_M_2'] = "DiT_T_1",
+        dit_type: Literal["UNet_B", "UNet_S", "UNet_T", "UNet_M"] = "UNet_M",
         dit_kwargs: dict = {},
-        timestep_respacing: str = "",
         diffusion_steps: int = 1000,
-        device: Literal["cpu", "cuda"] = "cuda"
+        timestep_respacing: str = "trailing4",
+        predict_target: Literal["epsilon", "velocity", "xstart", "xprev"] = "velocity",
+        rescale_betas_zero_snr: bool = True,
+        device: Literal["cpu", "cuda"] = "cuda",
     ):
         super().__init__()
         
@@ -50,12 +54,21 @@ class NextFrameDiTModel(nn.Module):
             self.vae = None
             
         self.dit = DiT_models[dit_type](**dit_kwargs)
-        self.dit.initialize_weights()
         
-        self.diffusion = create_diffusion(
+        self.train_diffusion = create_diffusion(
+            **DiffusionConfig(
+                timestep_respacing="",
+                predict_target=predict_target,
+                rescale_betas_zero_snr=rescale_betas_zero_snr,
+                diffusion_steps=diffusion_steps
+            ).model_dump()
+        )
+        self.sampling_diffusion = create_diffusion(
             **DiffusionConfig(
                 timestep_respacing=timestep_respacing,
-                diffusion_steps=diffusion_steps,
+                predict_target=predict_target,
+                rescale_betas_zero_snr=rescale_betas_zero_snr,
+                diffusion_steps=diffusion_steps  
             ).model_dump()
         )
         
@@ -66,6 +79,7 @@ class NextFrameDiTModel(nn.Module):
         x = torch.cat((_context_frames, _next_frame), dim=1)
         b, t, _, _, _ = x.shape
         
+        # Encode frames
         if self.vae is not None:
             x = rearrange(x, 'b t c h w -> (b t) c h w')
             with torch.no_grad():
@@ -79,25 +93,13 @@ class NextFrameDiTModel(nn.Module):
             dim=1
         )
         
-        model_kwargs = dict(x_context=x_context, y=None)
-        t = torch.randint(0, self.diffusion.num_timesteps, (x.shape[0],), device=self.device)
+        model_kwargs = dict(context=x_context, y=None)
+        t = torch.randint(0, self.train_diffusion.num_timesteps, (x.shape[0],), device=self.device)
         
-        loss_dict = self.diffusion.training_losses(self.dit, x, t, model_kwargs=model_kwargs)
+        loss_dict = self.train_diffusion.training_losses(self.dit, x, t, model_kwargs=model_kwargs)
         loss = loss_dict["loss"].mean()
         
         return loss
-    
-    def sample_frame_latents(self, x_context: Tensor) -> Tensor:
-        n, t, c, h, w = x_context.shape
-        x = torch.randn(n, c, h, w, device=self.device)
-        x_context = rearrange(x_context, "n t c h w -> n (t c) h w")
-        model_kwargs = dict(x_context=x_context, y=None)
-        
-        samples = self.diffusion.ddim_sample_loop(
-            self.dit, x.shape, x, clip_denoised=False, model_kwargs=model_kwargs, progress=False, device=self.device
-        )
-        
-        return samples
     
     def rollout_frames(self, x_context: Tensor, n_steps: int) -> Tensor:
         """
@@ -112,8 +114,8 @@ class NextFrameDiTModel(nn.Module):
         
         frames = []
         for _ in range(n_steps):
-            frame = self.sample_frame_latents(x_context).unsqueeze(1)
-            frames.append(frame)
+            frame = self._sample_frame(x_context).unsqueeze(1)
+            frames.append(frame.clone())
             x_context = torch.cat((x_context[:, 1:], frame), dim=1)
         
         frames = torch.cat(frames, dim=1)
@@ -124,3 +126,16 @@ class NextFrameDiTModel(nn.Module):
             frames = rearrange(frames, "(n t) c h w -> n t c h w", n=n)
         
         return frames
+    
+    def _sample_frame(self, x_context: Tensor) -> Tensor:
+        n, t, c, h, w = x_context.shape
+        x = torch.randn(n, c, h, w, device=self.device)
+        x_context = rearrange(x_context, "n t c h w -> n (t c) h w")
+        
+        model_kwargs = dict(context=x_context, y=None)
+        
+        samples = self.sampling_diffusion.ddim_sample_loop(
+            self.dit, x.shape, x, clip_denoised=True, model_kwargs=model_kwargs, progress=False, device=self.device
+        )
+        
+        return samples
