@@ -33,7 +33,7 @@ class NextFrameDiTModel(nn.Module):
         vae_kwargs: dict = {},
         vae_checkpoint_path: str | None = None,
         latent_scale_factor: float = 0.18215,
-        dit_type: Literal["DiT_M_2", "DiT_T_2"] = "DiT_T_2",
+        dit_type: Literal[*DiT_models.keys()] = "DiT_T_2",
         dit_kwargs: dict = {},
         diffusion_steps: int = 1000,
         timestep_respacing: str = "trailing4",
