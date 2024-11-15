@@ -15,7 +15,7 @@ load_dotenv()
 
 from vitssm.data import get_dataloaders_next_frame, get_dataset
 from vitssm.models import build_model
-from vitssm.engine.tasks import DiTNextFrameEngine
+from vitssm.engine.tasks import NextFrameDiTEngine
 
 
 wandb.login()
@@ -41,7 +41,7 @@ def main(config: str):
         #print(wandb.config)
         run_config = OmegaConf.create(dict(wandb.config))
         model = build_model(run_config.model)
-        engine = DiTNextFrameEngine(model=model, run_object=run_config)
+        engine = NextFrameDiTEngine(model=model, run_object=run_config)
 
         #if wandb.run.resumed:
         #    engine._resume_checkpoint()

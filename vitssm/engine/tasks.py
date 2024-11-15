@@ -64,7 +64,6 @@ class VAEEngine(ModelEngine):
     
     
 class NextFrameDiTEngine(ModelEngine):
-    
     def __init__(self, model: NextFrameDiTModel, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
@@ -94,42 +93,9 @@ class NextFrameDiTEngine(ModelEngine):
     @staticmethod
     def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
         wandb.log(eval_outs, step=step)
-    
-    
-class UncondUNetEngine(ModelEngine):
-    
-    def __init__(self, model: UncondUNetModel, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
-    
-    def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
-        self.optimizer.zero_grad()
-        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _loss = self.model.forward_train(_x)
-            
-        self.scaler.scale(_loss).backward()           
-        self.scaler.step(self.optimizer)
-        self.scaler.update()
-        
-        if (self.scheduler is not None) and self.scheduler_step_on_batch:
-            self.scheduler.step()
-        
-        return {"loss": _loss.item()}
-    
-    @torch.no_grad()
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
-        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            pass
-        #self.metrics.update(_frames, _y)
-        
-        return {}
-    
-    @staticmethod
-    def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
-        wandb.log(eval_outs, step=step)
-        
+
 
 class NextFrameUNetEngine(ModelEngine):
-    
     def __init__(self, model: NextFrameUNetModel, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
