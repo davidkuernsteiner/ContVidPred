@@ -3,7 +3,7 @@ group: 'DIT'
 name: 'vmdsprites-DiT_T_2-32'
 tags: ['dit', 'vmdsprites', 'tiny', 'ema']
 log_freq: 50
-eval_freq: 20
+eval_freq: 100
 checkpoint_freq: 9999999999999
 seed: 420
 
