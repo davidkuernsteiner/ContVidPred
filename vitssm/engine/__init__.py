@@ -43,7 +43,8 @@ class ModelEngine:
 
         self.model = model.to(self.device)
         for p in self.model.parameters():
-            p.register_hook(lambda grad: torch.clamp(grad, -1., 1.))     
+            if p.requires_grad:
+                p.register_hook(lambda grad: torch.clamp(grad, -1., 1.))     
         self.optimizer = get_optimizer(model, self.config)
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
         
