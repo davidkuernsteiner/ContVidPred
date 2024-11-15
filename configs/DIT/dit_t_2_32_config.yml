@@ -62,8 +62,8 @@ model:
 
   vae_type: "vae-tiny"
   vae_checkpoint_path: Null
-  unet_type: "DiT_T_2"
-  unet_kwargs: {
+  dit_type: "DiT_T_2"
+  dit_kwargs: {
     input_size: 32,
     in_channels: 15,
     out_channels: 3,

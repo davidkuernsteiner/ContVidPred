@@ -17,7 +17,7 @@ class NextFrameDiTModelConfig(BaseModel):
     vae_kwargs: dict[str, Any] = {}
     vae_checkpoint_path: str | None = None
     latent_scale_factor: float = 0.18215
-    dit_type: Literal["UNet_B", "UNet_S", "UNet_T", "UNet_M"] = "UNet_M"
+    dit_type: Literal["DiT_M_2", "DiT_T_2"] = "DiT_T_2"
     dit_kwargs: dict[str, Any] = {}
     diffusion_steps: int = 1000
     timestep_respacing: str = "trailing25"
@@ -33,7 +33,7 @@ class NextFrameDiTModel(nn.Module):
         vae_kwargs: dict = {},
         vae_checkpoint_path: str | None = None,
         latent_scale_factor: float = 0.18215,
-        dit_type: Literal["UNet_B", "UNet_S", "UNet_T", "UNet_M"] = "UNet_M",
+        dit_type: Literal["DiT_M_2", "DiT_T_2"] = "DiT_T_2",
         dit_kwargs: dict = {},
         diffusion_steps: int = 1000,
         timestep_respacing: str = "trailing4",
