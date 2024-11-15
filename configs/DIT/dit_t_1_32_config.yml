@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'DIT'
-name: 'vmdsprites-DiT_T_2-32'
+name: 'vmdsprites-DiT_T_1-32'
 tags: ['dit', 'vmdsprites', 'tiny', 'ema']
 log_freq: 50
 eval_freq: 100
@@ -62,7 +62,7 @@ model:
 
   vae_type: "vae-tiny"
   vae_checkpoint_path: Null
-  dit_type: "DiT_T_2"
+  dit_type: "DiT_T_1"
   dit_kwargs: {
     input_size: 32,
     in_channels: 15,
