@@ -23,8 +23,10 @@ class NextFrameUNetModelConfig(BaseModel):
     timestep_respacing: str = ""
     predict_target: Literal["epsilon", "velocity", "xstart", "xprev"] = "velocity"
     rescale_betas_zero_snr: bool = True
+    use_noise_augmentation: bool = True
     noise_augmentation_scale: float = 0.7
     noise_augmentation_buckets: int = 10
+    use_cfg: bool = True
     cfg_dropout: float = 0.1
     cfg_scale: float = 7.5
     cfg_rescale_factor: float = 0.7
@@ -44,8 +46,10 @@ class NextFrameUNetModel(nn.Module):
         timestep_respacing: str = "trailing4",
         predict_target: Literal["epsilon", "velocity", "xstart", "xprev"] = "velocity",
         rescale_betas_zero_snr: bool = True,
+        use_noise_augmentation: bool = True,
         noise_augmentation_scale: float = 0.7,
         noise_augmentation_buckets: int = 10,
+        use_cfg: bool = True,
         cfg_dropout: float = 0.1,
         cfg_scale: float = 7.5,
         cfg_rescale_factor: float = 0.7,
@@ -84,8 +88,10 @@ class NextFrameUNetModel(nn.Module):
         
         self.device = torch.device(device)
         self.scale_factor = latent_scale_factor
+        self.use_noise_augmentation = use_noise_augmentation
         self.noise_augmentation_scale = noise_augmentation_scale
         self.noise_augmentation_buckets = noise_augmentation_buckets
+        self.use_cfg = use_cfg
         self.cfg_dropout = cfg_dropout
         self.cfg_scale = cfg_scale
         self.cfg_rescale_factor = cfg_rescale_factor
@@ -108,14 +114,16 @@ class NextFrameUNetModel(nn.Module):
             dim=1
         )
         
+        #Dropout for cfg
+        if self.use_cfg:
+            drop_idcs = torch.rand(b, device=self.device) < self.cfg_dropout
+            x_context[drop_idcs] = torch.zeros_like(x_context[drop_idcs])
         # Add noise augmentation
-        alpha_cond_aug = torch.rand(b, device=self.device)[:, None, None, None] * self.noise_augmentation_scale  
-        x_context, alpha_buckets = self._cond_augmentation_from_alpha(x_context, alpha_cond_aug)
-        
-        # Dropout for cfg
-        drop_idcs = torch.rand(b, device=self.device) < self.cfg_dropout
-        x_context[drop_idcs] = torch.zeros_like(x_context[drop_idcs])
-        alpha_buckets[drop_idcs] = self.noise_augmentation_buckets
+        if self.use_noise_augmentation:
+            alpha_cond_aug = torch.rand(b, device=self.device)[:, None, None, None] * self.noise_augmentation_scale  
+            x_context, alpha_buckets = self._cond_augmentation_from_alpha(x_context, alpha_cond_aug)
+        else:
+            alpha_buckets = None
         
         model_kwargs = dict(context=x_context, class_labels=alpha_buckets)
         t = torch.randint(0, self.train_diffusion.num_timesteps, (x.shape[0],), device=self.device)
@@ -163,24 +171,34 @@ class NextFrameUNetModel(nn.Module):
         n, t, c, h, w = x_context.shape
         x = torch.randn(n, c, h, w, device=self.device)
         x_context = rearrange(x_context, "n t c h w -> n (t c) h w")
-        x_context.shape
         
+        if self.use_cfg:
+            x = torch.cat([x, x], 0)
+            x_context = torch.cat([x_context, torch.zeros_like(x_context)], 0)
+            model_kwargs = dict(cfg_scale=self.cfg_scale, cfg_rescale_factor=self.cfg_rescale_factor)
+        else:
+            model_kwargs = {}
         #Noise Augmentation
-        x_context, alpha_buckets = self._cond_augmentation_from_alpha(x_context, torch.ones(n, 1, 1, 1, device=self.device) * alpha_cond_aug)
+        if self.use_noise_augmentation:
+            x_context, alpha_buckets = self._cond_augmentation_from_alpha(
+                x_context, torch.ones(n, 1, 1, 1, device=self.device) * alpha_cond_aug
+            )
+        else:
+            alpha_buckets = None
         
-        # cfg
-        x = torch.cat([x, x], 0)
-        x_context = torch.cat([x_context, x_context], 0)
-        alpha_buckets_null = torch.tensor([self.noise_augmentation_buckets] * n, device=self.device)
-        alpha_buckets = torch.cat([alpha_buckets, alpha_buckets_null], 0)
-        
-        model_kwargs = dict(context=x_context, class_labels=alpha_buckets, cfg_scale=self.cfg_scale, cfg_rescale_factor=self.cfg_rescale_factor)
+        model_kwargs = dict(context=x_context, class_labels=alpha_buckets) | model_kwargs
         
         samples = self.sampling_diffusion.ddim_sample_loop(
-            self.unet.forward_with_cfg, x.shape, x, clip_denoised=True, model_kwargs=model_kwargs, progress=False, device=self.device
+            self.unet.forward_with_cfg if self.use_cfg else self.unet,
+            x.shape,
+            x,
+            clip_denoised=True,
+            model_kwargs=model_kwargs,
+            progress=False,
+            device=self.device
         )
         
-        return torch.split(samples, len(samples) // 2, dim=0)[0]
+        return torch.split(samples, len(samples) // 2, dim=0)[0] if self.use_cfg else samples
     
 
 class BasicNextFrameUNetModelConfig(BaseModel):

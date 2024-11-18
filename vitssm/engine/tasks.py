@@ -117,7 +117,11 @@ class NextFrameUNetEngine(ModelEngine):
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _frames = self.eval_model.rollout_frames(_x, _y.shape[1])
+            _frames = self.eval_model.rollout_frames(
+                _x,
+                _y.shape[1],
+                alpha_cond_aug=self.config.model.get("sampling_alpha_cond_aug", 0.0)
+            )
         self.metrics.update(_frames, _y)
         
         return {}
