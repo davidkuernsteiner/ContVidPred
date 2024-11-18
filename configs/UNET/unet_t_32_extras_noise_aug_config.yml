@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'UNET'
-name: 'vmdsprites-basic-UNet_M-32-extras-noise-aug-cfg'
+name: 'vmdsprites-basic-UNet_M-32-extras-noise-aug'
 tags: ['unet', 'vmdsprites', 'micro', 'ema']
 log_freq: 50
 eval_freq: 20
@@ -62,7 +62,7 @@ model:
 
   vae_type: "vae-tiny"
   vae_checkpoint_path: Null
-  unet_type: "UNet_M"
+  unet_type: "UNet_T"
   unet_kwargs: {
     sample_size: 32,
     in_channels: 15,
@@ -77,7 +77,7 @@ model:
   noise_augmentation_scale: 0.7
   noise_augmentation_buckets: 10
   sampling_alpha_cond_aug: 0.0
-  use_cfg: True
+  use_cfg: False
   cfg_dropout: 0.1
   cfg_scale: 1.5
   cfg_rescale_factor: 0.7

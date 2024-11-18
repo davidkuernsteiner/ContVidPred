@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'UNET'
-name: 'vmdsprites-basic-UNet_M-32-extras-noise-aug-cfg'
+name: 'vmdsprites-UNet_M-32-extras'
 tags: ['unet', 'vmdsprites', 'micro', 'ema']
 log_freq: 50
 eval_freq: 20
@@ -67,17 +67,16 @@ model:
     sample_size: 32,
     in_channels: 15,
     out_channels: 3,
-    num_class_embeds: 10,
   }
   diffusion_steps: 1000
   timestep_respacing: "trailing25"
   predict_target: "velocity"
   rescale_betas_zero_snr: True
-  use_noise_augmentation: True
+  use_noise_augmentation: False
   noise_augmentation_scale: 0.7
   noise_augmentation_buckets: 10
   sampling_alpha_cond_aug: 0.0
-  use_cfg: True
+  use_cfg: False
   cfg_dropout: 0.1
   cfg_scale: 1.5
   cfg_rescale_factor: 0.7

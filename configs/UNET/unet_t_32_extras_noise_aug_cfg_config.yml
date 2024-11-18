@@ -62,7 +62,7 @@ model:
 
   vae_type: "vae-tiny"
   vae_checkpoint_path: Null
-  unet_type: "UNet_M"
+  unet_type: "UNet_T"
   unet_kwargs: {
     sample_size: 32,
     in_channels: 15,

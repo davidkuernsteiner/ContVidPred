@@ -181,7 +181,7 @@ class NextFrameUNetModel(nn.Module):
         #Noise Augmentation
         if self.use_noise_augmentation:
             x_context, alpha_buckets = self._cond_augmentation_from_alpha(
-                x_context, torch.ones(n, 1, 1, 1, device=self.device) * alpha_cond_aug
+                x_context, torch.ones(n * 2 if self.use_cfg else n, 1, 1, 1, device=self.device) * alpha_cond_aug
             )
         else:
             alpha_buckets = None

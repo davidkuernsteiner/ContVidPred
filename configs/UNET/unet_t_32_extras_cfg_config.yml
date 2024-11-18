@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'UNET'
-name: 'vmdsprites-UNet_M-32'
+name: 'vmdsprites-basic-UNet_M-32-extras-cfg'
 tags: ['unet', 'vmdsprites', 'micro', 'ema']
 log_freq: 50
 eval_freq: 20
@@ -22,7 +22,7 @@ dataset:
   persistent_workers: True
   pin_memory: True
   batch_size: 64
-  val_batch_size: 64
+  val_batch_size: 32
   rollout_length: 16
 
 optimization:
@@ -36,14 +36,14 @@ optimization:
   scheduler:
     name: 'LambdaLR'
     kwargs: {warmup_steps: 1000,
-             decay_steps: 9000,
-             gamma: 1.0}
+             decay_steps: 19000,
+             gamma: 0.1}
     step_on_batch: True
   #scheduler:
   #  name: 'StepLR'
   #  kwargs: {step_size: 1, gamma: 1.0}
   #  step_on_batch: False
-  steps: 10000
+  steps: 20000
 
 metrics:
   SSIM:
@@ -62,17 +62,21 @@ model:
 
   vae_type: "vae-tiny"
   vae_checkpoint_path: Null
-  unet_type: "UNet_M"
+  unet_type: "UNet_T"
   unet_kwargs: {
     sample_size: 32,
     in_channels: 15,
     out_channels: 3,
-    num_class_embeds: 11,
   }
   diffusion_steps: 1000
-  timestep_respacing: "trailing10"
+  timestep_respacing: "trailing25"
+  predict_target: "velocity"
+  rescale_betas_zero_snr: True
+  use_noise_augmentation: False
   noise_augmentation_scale: 0.7
   noise_augmentation_buckets: 10
+  sampling_alpha_cond_aug: 0.0
+  use_cfg: True
   cfg_dropout: 0.1
   cfg_scale: 1.5
   cfg_rescale_factor: 0.7
