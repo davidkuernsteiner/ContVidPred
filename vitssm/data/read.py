@@ -214,7 +214,7 @@ def _read_from_stream(
 
 #TAKEN FROM: https://github.com/hpcaitech/Open-Sora.git
 def read_video_cv2(video_path):
-    cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(video_path, cv2.CAP_DSHOW)
 
     if not cap.isOpened():
         # print("Error: Unable to open video")
@@ -237,12 +237,12 @@ def read_video_cv2(video_path):
             frames.append(frame[:, :, ::-1])  # BGR to RGB
 
             # Exit if 'q' is pressed
-            if cv2.waitKey(25) & 0xFF == ord("q"):
-                break
+            #if cv2.waitKey(25) & 0xFF == ord("q"):
+            #    break
 
         # Release the video capture object and close all windows
         cap.release()
-        cv2.destroyAllWindows()
+        #cv2.destroyAllWindows()
 
         frames = np.stack(frames)
         frames = torch.from_numpy(frames)  # [T, H, W, C=3]
