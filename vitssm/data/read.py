@@ -237,8 +237,8 @@ def read_video_cv2(video_path):
             frames.append(frame[:, :, ::-1])  # BGR to RGB
 
             # Exit if 'q' is pressed
-            if cv2.waitKey(25) & 0xFF == ord("q"):
-                break
+            #if cv2.waitKey(25) & 0xFF == ord("q"):
+            #    break
 
         # Release the video capture object and close all windows
         cap.release()
