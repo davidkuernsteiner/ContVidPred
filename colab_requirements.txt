@@ -8,6 +8,5 @@ wandb
 wandb[media]
 einops
 av
-opencv-python
 python-dotenv
 pydantic
