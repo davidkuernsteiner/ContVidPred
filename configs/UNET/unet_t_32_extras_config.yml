@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'UNET'
-name: 'vmdsprites-UNet_M-32-extras'
+name: 'vmdsprites-UNet_T-32-extras'
 tags: ['unet', 'vmdsprites', 'micro', 'ema']
 log_freq: 50
 eval_freq: 20
