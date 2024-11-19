@@ -214,35 +214,42 @@ def _read_from_stream(
 
 #TAKEN FROM: https://github.com/hpcaitech/Open-Sora.git
 def read_video_cv2(video_path):
-    cap = cv2.VideoCapture(video_path, cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(video_path)
 
-    #if not cap.isOpened():
+    if not cap.isOpened():
         # print("Error: Unable to open video")
-    #    raise ValueError
-    #else:
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    vinfo = {
-        "video_fps": fps,
-    }
+        raise ValueError
+    else:
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        vinfo = {
+            "video_fps": fps,
+        }
 
-    frames = []
-    while True:
-        # Read a frame from the video
-        ret, frame = cap.read()
-        # If frame is not read correctly, break the loop
-        if not ret:
-            break
-        frames.append(frame[:, :, ::-1])  # BGR to RGB
-        # Exit if 'q' is pressed
-        #if cv2.waitKey(25) & 0xFF == ord("q"):
-        #    break
-    # Release the video capture object and close all windows
-    cap.release()
-    #cv2.destroyAllWindows()
-    frames = np.stack(frames)
-    frames = torch.from_numpy(frames)  # [T, H, W, C=3]
-    frames = frames.permute(0, 3, 1, 2)
-    return frames, vinfo
+        frames = []
+        
+        while True:
+            # Read a frame from the video
+            ret, frame = cap.read()
+            
+            # If frame is not read correctly, break the loop
+            if not ret:
+                break
+            
+            frames.append(frame[:, :, ::-1])  # BGR to RGB
+            
+            # Exit if 'q' is pressed
+            if cv2.waitKey(25) & 0xFF == ord("q"):
+                break
+            
+        # Release the video capture object and close all windows
+        cap.release()
+        cv2.destroyAllWindows()
+        
+        frames = np.stack(frames)
+        frames = torch.from_numpy(frames)  # [T, H, W, C=3]
+        frames = frames.permute(0, 3, 1, 2)
+        
+        return frames, vinfo
 
 
 #TAKEN FROM: https://github.com/hpcaitech/Open-Sora.git
