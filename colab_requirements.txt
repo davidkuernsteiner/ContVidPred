@@ -8,6 +8,6 @@ wandb
 wandb[media]
 einops
 av
-opencv-python==4.10.0.84
+opencv-python
 python-dotenv
 pydantic
