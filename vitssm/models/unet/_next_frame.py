@@ -96,8 +96,8 @@ class NextFrameUNetModel(nn.Module):
         self.cfg_scale = cfg_scale
         self.cfg_rescale_factor = cfg_rescale_factor
     
-    def forward_train(self, _context_frames: Tensor, _next_frame: Tensor) -> float:
-        x = torch.cat((_context_frames, _next_frame), dim=1)
+    def forward_train(self, context_frames: Tensor, next_frame: Tensor) -> float:
+        x = torch.cat((context_frames, next_frame), dim=1)
         b, t, _, _, _ = x.shape
         
         # Encode frames

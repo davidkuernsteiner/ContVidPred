@@ -130,32 +130,63 @@ class NextFrameUNetEngine(ModelEngine):
     def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
         wandb.log(eval_outs, step=step)
 
-class NextFrameUPTEngine(ModelEngine):
+
+class AutoEncoderUPTEngine(ModelEngine):   
+    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
+        super().__init__(model, run_object)
+    
+    def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        self.optimizer.zero_grad()
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.model(_x)
+            _loss = self.criterion(_pred, _y)
+            
+        self.scaler.scale(_loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
         
-        def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
-            super().__init__(model, run_object)
+        if (self.scheduler is not None) and self.scheduler_step_on_batch:
+            self.scheduler.step()
         
-        def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
-            self.optimizer.zero_grad()
-            with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-                _pred = self.model(_x)
-                _loss = self.criterion(_pred, _y)
-            self.scaler.scale(_loss).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-            
-            if (self.scheduler is not None) and self.scheduler_step_on_batch:
-                self.scheduler.step()
-            
-            return {"loss": _loss.item()}
+        return {"loss": _loss.item()}
+    
+    @torch.no_grad()
+    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.eval_model(_x)
+            _loss = self.criterion(_pred, _y)
         
-        @torch.no_grad()
-        def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
-            with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-                _pred = self.eval_model(_x)
-                _loss = self.criterion(_pred, _y)
-            
-            if self.metrics is not None:
-                self.metrics.update(_pred, _y)
-            
-            return {"loss": _loss.item()}
+        if self.metrics is not None:
+            self.metrics.update(_pred, _y)
+        
+        return {"loss": _loss.item()}
+    
+
+class NextFrameUPTEngine(ModelEngine):   
+    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
+        super().__init__(model, run_object)
+    
+    def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        self.optimizer.zero_grad()
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.model(_x)
+            _loss = self.criterion(_pred, _y)
+        self.scaler.scale(_loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+        
+        if (self.scheduler is not None) and self.scheduler_step_on_batch:
+            self.scheduler.step()
+        
+        return {"loss": _loss.item()}
+    
+    @torch.no_grad()
+    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.eval_model(_x)
+            _loss = self.criterion(_pred, _y)
+        
+        if self.metrics is not None:
+            self.metrics.update(_pred, _y)
+        
+        return {"loss": _loss.item()}

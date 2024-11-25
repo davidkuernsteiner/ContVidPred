@@ -2,6 +2,7 @@ torch
 torchvision
 torchmetrics
 diffusers[torch]
+kappamodules
 omegaconf
 pandas
 wandb
