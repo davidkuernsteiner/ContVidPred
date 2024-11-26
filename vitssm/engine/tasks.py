@@ -149,7 +149,7 @@ class AutoEncoderUPTEngine(ModelEngine):
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _pred = self.model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))
-            _pred = torch.clamp(_pred, -1.0, 1.0)
+            _pred = torch.clamp(_pred, -1, 1)
             _loss = self.criterion(_pred, _x)
             
         self.scaler.scale(_loss).backward()
@@ -174,7 +174,7 @@ class AutoEncoderUPTEngine(ModelEngine):
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))
-            _pred = torch.clamp(_pred, -1.0, 1.0)
+            _pred = torch.clamp(_pred, -1, 1)
         
         if self.metrics is not None:
             self.metrics.update(_pred, _x)
