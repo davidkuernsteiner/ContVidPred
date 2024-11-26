@@ -1,5 +1,6 @@
 from functools import partial
 
+from einops import rearrange
 import torch
 from kappamodules.layers import LinearProjection, Sequential
 from kappamodules.transformer import DitBlock, PrenormBlock, PerceiverPoolingBlock, DitPerceiverPoolingBlock
@@ -12,7 +13,7 @@ class UPTContextualApproximator(nn.Module):
     def __init__(
             self,
             input_dim=96,
-            num_input_tokens=32,
+            context_length=4,
             num_output_tokens=32,
             depth=4,
             num_heads=4,
@@ -42,7 +43,7 @@ class UPTContextualApproximator(nn.Module):
             block_pool = partial(DitPerceiverPoolingBlock, perceiver_kwargs={"cond_dim": cond_dim})
             
         # Temporal pooling
-        self.temp_pos_embed = VitPosEmbed1d(seqlens=num_input_tokens, dim=dim, is_learnable=False)
+        self.temp_pos_embed = VitPosEmbed1d(seqlens=(context_length, ), dim=dim, is_learnable=False)
         self.temp_pool = block_pool(
             dim=dim, 
             num_heads=num_heads,
@@ -62,10 +63,10 @@ class UPTContextualApproximator(nn.Module):
 
     def forward(self, x, condition=None):
         # check inputs
-        assert x.ndim == 3, "expected shape (batch_size, num_latent_tokens, dim)"
+        assert x.ndim == 4, "expected shape (batch_size, context_length, num_latent_tokens, dim)"
         if condition is not None:
             assert condition.ndim == 2, "expected shape (batch_size, cond_dim)"
-
+            
         # pass condition to DiT blocks
         cond_kwargs = {}
         if condition is not None:
@@ -74,8 +75,11 @@ class UPTContextualApproximator(nn.Module):
         # project to decoder dim
         x = self.input_proj(x)
         
+        b, c, t, d = x.shape
         # temporal embedding + pooling
+        x = rearrange(x, "b c t d -> b c (t d)")
         x = self.temp_pos_embed(x)
+        x = rearrange(x, "b c (t d) -> b (c t) d", c=c, t=t, d=d)
         x = self.temp_pool(x)
 
         # apply blocks
