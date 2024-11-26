@@ -293,17 +293,17 @@ class UPTImageAutoencoder(nn.Module):
         return self.decoder(latent, output_pos=output_pos)
     
 
-def UPTAE_S(**kwargs):
+def UPTAE_M(**kwargs):
     return UPTImageAutoencoder(
         input_dim=3, 
         patch_size=2, 
-        latent_dim=192, 
-        num_heads=4, 
-        depth=4, 
-        perc_dim=192, 
-        perc_num_heads=4,
-        num_latent_tokens=32,
-        **kwargs,
+        latent_dim=96, 
+        num_heads=2, 
+        depth=2, 
+        perc_dim=96, 
+        perc_num_heads=2,
+        num_latent_tokens=8,
+        **kwargs
         )
     
 def UPTAE_T(**kwargs):
@@ -318,18 +318,18 @@ def UPTAE_T(**kwargs):
         num_latent_tokens=16,
         **kwargs,
         )
-
-def UPTAE_M(**kwargs):
+    
+def UPTAE_S(**kwargs):
     return UPTImageAutoencoder(
         input_dim=3, 
         patch_size=2, 
-        latent_dim=96, 
-        num_heads=2, 
-        depth=2, 
-        perc_dim=96, 
-        perc_num_heads=2,
-        num_latent_tokens=8,
-        **kwargs
+        latent_dim=192, 
+        num_heads=4, 
+        depth=4, 
+        perc_dim=192, 
+        perc_num_heads=4,
+        num_latent_tokens=32,
+        **kwargs,
         )
     
 upt_autoencoder_models = {

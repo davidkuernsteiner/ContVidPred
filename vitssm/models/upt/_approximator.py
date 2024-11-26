@@ -2,17 +2,20 @@ from functools import partial
 
 import torch
 from kappamodules.layers import LinearProjection, Sequential
-from kappamodules.transformer import DitBlock, PrenormBlock
+from kappamodules.transformer import DitBlock, PrenormBlock, PerceiverPoolingBlock, DitPerceiverPoolingBlock
+from kappamodules.vit import VitPosEmbed1d
 from torch import nn
 
 
-#Taken from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/approximator.py
-class UPTApproximator(nn.Module):
+#Adapted from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/approximator.py
+class UPTContextualApproximator(nn.Module):
     def __init__(
             self,
-            input_dim,
-            depth,
-            num_heads,
+            input_dim=96,
+            num_input_tokens=32,
+            num_output_tokens=32,
+            depth=4,
+            num_heads=4,
             dim=None,
             cond_dim=None,
             init_weights="truncnormal002",
@@ -20,6 +23,7 @@ class UPTApproximator(nn.Module):
     ):
         super().__init__(**kwargs)
         dim = dim or input_dim
+        self.num_output_tokens = num_output_tokens
         self.dim = dim
         self.depth = depth
         self.num_heads = num_heads
@@ -32,8 +36,19 @@ class UPTApproximator(nn.Module):
         # blocks
         if cond_dim is None:
             block_ctor = PrenormBlock
+            block_pool = PerceiverPoolingBlock
         else:
             block_ctor = partial(DitBlock, cond_dim=cond_dim)
+            block_pool = partial(DitPerceiverPoolingBlock, perceiver_kwargs={"cond_dim": cond_dim})
+            
+        # Temporal pooling
+        self.temp_pos_embed = VitPosEmbed1d(seqlens=num_input_tokens, dim=dim, is_learnable=False)
+        self.temp_pool = block_pool(
+            dim=dim, 
+            num_heads=num_heads,
+            num_query_tokens=num_output_tokens,
+        )
+            
         self.blocks = Sequential(
             *[
                 block_ctor(
@@ -58,6 +73,10 @@ class UPTApproximator(nn.Module):
 
         # project to decoder dim
         x = self.input_proj(x)
+        
+        # temporal embedding + pooling
+        x = self.temp_pos_embed(x)
+        x = self.temp_pool(x)
 
         # apply blocks
         x = self.blocks(x, **cond_kwargs)
@@ -65,36 +84,39 @@ class UPTApproximator(nn.Module):
         return x
     
 
-def UPTA_M(**kwargs):
-    return UPTApproximator(
+def UPTCA_M(**kwargs):
+    return UPTContextualApproximator(
         input_dim=96,
         depth=2,
         num_heads=2,
         dim=96,
+        num_output_tokens=8,
         **kwargs,
     )
     
-def UPTA_T(**kwargs):
-    return UPTApproximator(
+def UPTCA_T(**kwargs):
+    return UPTContextualApproximator(
         input_dim=96,
         depth=4,
         num_heads=4,
         dim=96,
+        num_output_tokens=16,
         **kwargs,
     )
     
-def UPTA_S(**kwargs):
-    return UPTApproximator(
+def UPTCA_S(**kwargs):
+    return UPTContextualApproximator(
         input_dim=192,
         depth=4,
         num_heads=4,
         dim=192,
+        num_output_tokens=32,
         **kwargs,
     )
     
 
 upt_approximator_models = {
-    "UPTA_M": UPTA_M,
-    "UPTA_T": UPTA_T,
-    "UPTA_S": UPTA_S,
+    "UPTCA_M": UPTCA_M,
+    "UPTCA_T": UPTCA_T,
+    "UPTCA_S": UPTCA_S,
 }
