@@ -142,14 +142,14 @@ class AutoEncoderUPTEngine(ModelEngine):
         
         _x = rearrange(_x, "b t c h w -> (b t) c h w")
         output_pos = rearrange(
-            torch.stack(torch.meshgrid([torch.arange(h - 1), torch.arange(h - 1)], indexing="ij")),
+            torch.stack(torch.meshgrid([torch.arange(h), torch.arange(h)], indexing="ij")),
             "ndim height width -> (height width) ndim",
-        ).float()
+        ).float().to(self.device)
         output_pos = output_pos / (h - 1)  * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
-            _loss = self.criterion(_pred, _y)
+            _pred = self.model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))
+            _loss = self.criterion(_pred, _x)
             
         self.scaler.scale(_loss).backward()
         self.scaler.step(self.optimizer)
@@ -166,16 +166,16 @@ class AutoEncoderUPTEngine(ModelEngine):
         
         _x = rearrange(_x, "b t c h w -> (b t) c h w")
         output_pos = rearrange(
-            torch.stack(torch.meshgrid([torch.arange(h - 1), torch.arange(h - 1)], indexing="ij")),
+            torch.stack(torch.meshgrid([torch.arange(h), torch.arange(h)], indexing="ij")),
             "ndim height width -> (height width) ndim",
-        ).float()
+        ).float().to(self.device)
         output_pos = output_pos / (h - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
+            _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))
         
         if self.metrics is not None:
-            self.metrics.update(_pred, _y)
+            self.metrics.update(_pred, _x)
         
         return {}
     
