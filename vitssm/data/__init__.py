@@ -61,25 +61,31 @@ def get_dataset(config: DictConfig) -> Any:
                 )
             )
             
-        case "vmdsprites":
+        case "vmdsprites-ae":
             fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
             res = config.get("resolution", 64)
             
             if config.get("load_in_memory", True):
-                return MemoryVideoDataset(
-                    data_path=str(data_root / "VMDsprites" / "folds" / fold),
-                    num_frames=config.get("num_frames", 10),
-                    frame_interval=config.get("frame_interval", 1),
-                    image_size=(res, res),
-                    transform_name=config.get("transform_name", "center"),
+                return AEDatasetWrapper(
+                    MemoryVideoDataset(
+                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        num_frames=config.get("num_frames", 10),
+                        frame_interval=config.get("frame_interval", 1),
+                        image_size=(res, res),
+                        transform_name=config.get("transform_name", "center"),
+                    ),
+                    return_y=True,
                 )
             else:
-                return VideoDataset(
-                    data_path=str(data_root / "VMDsprites" / "folds" / fold),
-                    num_frames=config.get("num_frames", 10),
-                    frame_interval=config.get("frame_interval", 1),
-                    image_size=(res, res),
-                    transform_name=config.get("transform_name", "center"),
+                return AEDatasetWrapper(
+                    VideoDataset(
+                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        num_frames=config.get("num_frames", 10),
+                        frame_interval=config.get("frame_interval", 1),
+                        image_size=(res, res),
+                        transform_name=config.get("transform_name", "center"),
+                    ),
+                    return_y=True,
                 )
 
         case "vmdsprites-nextframe":

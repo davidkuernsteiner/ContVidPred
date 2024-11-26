@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
-from einops import rearrange
+from einops import rearrange, repeat
 
 from wandb.sdk.wandb_run import Run
 import wandb
@@ -12,7 +12,7 @@ import wandb
 from . import ModelEngine
 from ..models import UncondUNetModel, NextFrameUNetModel, NextFrameDiTModel
 from ..models.vae import frange_cycle_linear
-from ..utils.metrics import RolloutMetricCollectionWrapper
+from ..utils.metrics import RolloutMetricCollectionWrapper, AutoEncoderMetricCollectionWrapper
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 #from latte.utils import clip_grad_norm_	
     
@@ -134,11 +134,21 @@ class NextFrameUNetEngine(ModelEngine):
 class AutoEncoderUPTEngine(ModelEngine):   
     def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
+        self.metrics = AutoEncoderMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
+        b, t, c, h, w = _x.shape
+        
+        _x = rearrange(_x, "b t c h w -> (b t) c h w")
+        output_pos = rearrange(
+            torch.stack(torch.meshgrid([torch.arange(h - 1), torch.arange(h - 1)], indexing="ij")),
+            "ndim height width -> (height width) ndim",
+        ).float()
+        output_pos = output_pos / (h - 1)  * 1000
+        
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x)
+            _pred = self.model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
             _loss = self.criterion(_pred, _y)
             
         self.scaler.scale(_loss).backward()
@@ -152,14 +162,26 @@ class AutoEncoderUPTEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        b, t, c, h, w = _x.shape
+        
+        _x = rearrange(_x, "b t c h w -> (b t) c h w")
+        output_pos = rearrange(
+            torch.stack(torch.meshgrid([torch.arange(h - 1), torch.arange(h - 1)], indexing="ij")),
+            "ndim height width -> (height width) ndim",
+        ).float()
+        output_pos = output_pos / (h - 1) * 1000
+        
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.eval_model(_x)
-            _loss = self.criterion(_pred, _y)
+            _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
         
         if self.metrics is not None:
             self.metrics.update(_pred, _y)
         
-        return {"loss": _loss.item()}
+        return {}
+    
+    @staticmethod
+    def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
+        wandb.log(eval_outs, step=step)
     
 
 class NextFrameUPTEngine(ModelEngine):   

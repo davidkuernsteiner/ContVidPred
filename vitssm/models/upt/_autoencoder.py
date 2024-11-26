@@ -1,6 +1,7 @@
 from functools import partial
 
 import einops
+from pydantic import BaseModel
 from kappamodules.layers import Sequential
 from kappamodules.transformer import PerceiverPoolingBlock, PrenormBlock, DitPerceiverPoolingBlock, DitBlock
 from kappamodules.utils.param_checking import to_2tuple
@@ -240,6 +241,18 @@ class DecoderPerceiver(nn.Module):
             raise NotImplementedError(f"invalid unbatch_mode '{self.unbatch_mode}'")
 
         return x
+    
+
+class UPTImageAutoencoderConfig(BaseModel):
+    input_dim: int = 3
+    patch_size: int = 2
+    resolution: int = 32
+    latent_dim: int = 96
+    num_heads: int = 4
+    depth: int = 4
+    perc_dim: int = 96
+    perc_num_heads: int = 4
+    num_latent_tokens: int = 32
     
 
 # Adapted from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/upt_image_autoencoder.py

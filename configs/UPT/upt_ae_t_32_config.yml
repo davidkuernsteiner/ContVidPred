@@ -1,0 +1,69 @@
+project: 'ViTSSM'
+group: 'UPT'
+name: 'vmdsprites-UPT_AE_T-32'
+tags: ['upt', 'vmdsprites', 'tiny']
+log_freq: 50
+eval_freq: 10
+checkpoint_freq: 9999999999999
+seed: 420
+
+dataset:
+  name: 'vmdsprites-ae'
+  load_in_memory: True
+  mode: 'train'
+  fold: '0'
+  output_format: 'TCHW'
+  num_frames: 1
+  frame_interval: 1
+  resolution: 32
+  train_percentage: 0.9
+  num_workers: 8
+  persistent_workers: True
+  pin_memory: True
+  batch_size: 64
+  val_batch_size: 128
+
+optimization:
+  loss:
+    name: 'MSELoss'
+    kwargs: {}
+  optimizer:
+    name: 'AdamW'
+    kwargs: {lr: 0.001,
+             weight_decay: 0.01}
+  scheduler:
+    name: 'LambdaLR'
+    kwargs: {warmup_steps: 1000,
+             decay_steps: 19000,
+             gamma: 0.1}
+    step_on_batch: True
+  #scheduler:
+  #  name: 'StepLR'
+  #  kwargs: {step_size: 1, gamma: 1.0}
+  #  step_on_batch: False
+  steps: 20000
+
+metrics:
+  SSIM:
+    name: 'StructuralSimilarityIndexMeasure'
+    kwargs: {}
+  PSNR:
+    name: 'PeakSignalNoiseRatio'
+    kwargs: {}
+
+model:
+  name: 'upt-ae'
+  device: 'cuda'
+  use_amp: False
+  use_ema: False
+  ema_steps: 1
+
+  input_dim: 3
+  patch_size: 2
+  resolution: 32
+  latent_dim: 96
+  num_heads: 4
+  depth: 4
+  perc_dim: 96
+  perc_num_heads: 4
+  num_latent_tokens: 16

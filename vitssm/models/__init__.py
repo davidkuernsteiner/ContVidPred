@@ -7,6 +7,7 @@ from .vae import VideoVAEConfig
 #from .latte import LatteDiffusionModelConfig, LatteDiffusionModel
 from .dit import NextFrameDiTModelConfig, NextFrameDiTModel
 from .unet import UncondUNetModel, UncondUNetModelConfig, NextFrameUNetModel, NextFrameUNetModelConfig, BasicNextFrameUNetModel, BasicNextFrameUNetModelConfig
+from .upt import NextFrameUPTModel, NextFrameUPTModelConfig, UPTImageAutoencoder, UPTImageAutoencoderConfig
 
 
 def build_model(config: DictConfig) -> Module:
@@ -41,6 +42,16 @@ def build_model(config: DictConfig) -> Module:
             model_config = BasicNextFrameUNetModelConfig(**config)
             model = BasicNextFrameUNetModel(**model_config.model_dump())
             return model
-
+        
+        case "upt_ae":
+            model_config = UPTImageAutoencoderConfig(**config)
+            model = UPTImageAutoencoder(**model_config.model_dump())
+            return model
+        
+        case "upt_next_frame":
+            model_config = NextFrameUPTModelConfig(**config)
+            model = NextFrameUPTModel(**model_config.model_dump())
+            return model
+        
         case _:
             raise ValueError(f"Model {config.name} not supported.")
