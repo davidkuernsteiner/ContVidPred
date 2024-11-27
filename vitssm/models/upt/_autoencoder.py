@@ -2,6 +2,7 @@ from functools import partial
 
 import einops
 from pydantic import BaseModel
+import torch
 from kappamodules.layers import Sequential
 from kappamodules.transformer import PerceiverPoolingBlock, PrenormBlock, DitPerceiverPoolingBlock, DitBlock
 from kappamodules.utils.param_checking import to_2tuple
@@ -297,13 +298,13 @@ class UPTImageAutoencoder(nn.Module):
         latent = self.encoder(x)
         pred = self.decoder(latent, output_pos=output_pos)
 
-        return pred
+        return torch.clamp(pred, -1, 1)
     
     def encode(self, x: Tensor):
         return self.encoder(x)
     
     def decode(self, latent: Tensor, output_pos: Tensor):
-        return self.decoder(latent, output_pos=output_pos)
+        return torch.clamp(self.decoder(latent, output_pos=output_pos), -1, 1)
     
 
 def UPTAE_M(**kwargs):
