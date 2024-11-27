@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'UPT'
-name: 'vmdsprites-UPT_AE_T-32'
+name: 'vmdsprites-UPT_AE_T-32-clip'
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 50
 eval_freq: 10
