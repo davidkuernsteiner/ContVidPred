@@ -182,7 +182,7 @@ class ModelEngine:
             "scaler": self.scaler.state_dict(),
             "scheduler": self.scheduler.state_dict() if self.scheduler is not None else None,
             "state": self.state,
-        } | {"ema": self.ema.state_dict()} if self.use_ema else {}
+        } | ({"ema": self.ema.state_dict()} if self.use_ema else {})
         
         checkpoint_path = os.path.join(save_dir, self.config.name + ".pth")
         torch.save(checkpoint, checkpoint_path)
