@@ -29,13 +29,13 @@ optimization:
     kwargs: {}
   optimizer:
     name: 'AdamW'
-    kwargs: {lr: 0.0001,
+    kwargs: {lr: 0.001,
              weight_decay: 0.01}
   scheduler:
     name: 'LambdaLR'
     kwargs: {warmup_steps: 1000,
              decay_steps: 29000,
-             gamma: 1.0}
+             gamma: 0.1}
     step_on_batch: True
   #scheduler:
   #  name: 'StepLR'
