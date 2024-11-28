@@ -103,8 +103,6 @@ def UPTCA_M(**kwargs):
 def UPTCA_T(**kwargs):
     return UPTContextualApproximator(
         input_dim=96,
-        depth=4,
-        num_heads=4,
         dim=96,
         num_input_tokens=16,
         num_output_tokens=16,
