@@ -44,7 +44,7 @@ class UPTContextualApproximator(nn.Module):
             block_pool = partial(DitPerceiverPoolingBlock, perceiver_kwargs={"cond_dim": cond_dim})
             
         # Temporal pooling
-        self.temp_pos_embed = VitPosEmbed1d(seqlens=(context_length, ), dim=dim * num_input_tokens, is_learnable=False)
+        self.temp_pos_embed = VitPosEmbed1d(seqlens=(context_length, ), dim=dim, is_learnable=False)
         self.temp_pool = block_pool(
             dim=dim, 
             num_heads=num_heads,
@@ -76,11 +76,11 @@ class UPTContextualApproximator(nn.Module):
         # project to decoder dim
         x = self.input_proj(x)
         
-        _, c, t, d = x.shape
+        b, c, t, d = x.shape
         # temporal embedding + pooling
-        x = rearrange(x, "bs cl nt di -> bs cl (nt di)")
+        x = rearrange(x, "bs cl nt di -> (bs nt) cl di")
         x = self.temp_pos_embed(x)
-        x = rearrange(x, "bs cl (nt di) -> bs (cl nt) di", cl=c, nt=t, di=d)
+        x = rearrange(x, "(bs nt) cl di -> bs (cl nt) di", bs=b, cl=c, nt=t)
         x = self.temp_pool(x)
 
         # apply blocks
@@ -92,7 +92,7 @@ class UPTContextualApproximator(nn.Module):
 def UPTCA_M(**kwargs):
     return UPTContextualApproximator(
         input_dim=96,
-        depth=2,
+        depth=4,
         num_heads=2,
         dim=96,
         num_input_tokens=8,
@@ -103,6 +103,8 @@ def UPTCA_M(**kwargs):
 def UPTCA_T(**kwargs):
     return UPTContextualApproximator(
         input_dim=96,
+        depth=8,
+        num_heads=4,
         dim=96,
         num_input_tokens=16,
         num_output_tokens=16,
@@ -112,8 +114,8 @@ def UPTCA_T(**kwargs):
 def UPTCA_S(**kwargs):
     return UPTContextualApproximator(
         input_dim=192,
-        depth=4,
-        num_heads=4,
+        depth=12,
+        num_heads=6,
         dim=192,
         num_input_tokens=32,
         num_output_tokens=32,

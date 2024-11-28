@@ -1,7 +1,7 @@
 project: 'ViTSSM'
 group: 'UPT'
-name: 'vmdsprites-UPT_AE_T-32'
-tags: ['upt', 'vmdsprites', 'tiny']
+name: 'vmdsprites-UPT_AE_M-32'
+tags: ['upt', 'vmdsprites', 'micro']
 log_freq: 50
 eval_freq: 10
 checkpoint_freq: 9999999999999
@@ -62,8 +62,8 @@ model:
   patch_size: 2
   resolution: 32
   latent_dim: 96
-  num_heads: 4
-  depth: 8
+  num_heads: 2
+  depth: 4
   perc_dim: 96
-  perc_num_heads: 4
-  num_latent_tokens: 16
+  perc_num_heads: 2
+  num_latent_tokens: 8
