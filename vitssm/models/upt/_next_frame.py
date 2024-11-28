@@ -57,7 +57,7 @@ class NextFrameUPTModel(nn.Module):
         
         x_next_pred = self.approximator(x_context)
         
-        return x_next_pred, x_next
+        return x_next_pred, x_next.squeeze(1)
     
     def rollout_frames(self, x_context: Tensor, n_steps: int,):
         bs, cl, ch, ht, wt = x_context.shape

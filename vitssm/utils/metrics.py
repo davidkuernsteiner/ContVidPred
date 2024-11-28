@@ -10,7 +10,7 @@ from torchmetrics import Metric, MetricCollection
 import torchmetrics.image
 import wandb
 
-from .visual import model_output_to_image
+from .visual import model_output_to_image, model_output_to_video
 
 
 def get_metric_collection(config: DictConfig) -> MetricCollection:
