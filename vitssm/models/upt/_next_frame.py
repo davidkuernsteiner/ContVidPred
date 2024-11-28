@@ -14,7 +14,7 @@ class NextFrameUPTModelConfig(BaseModel):
     upt_autoencoder_type: Literal["UPTAE_M", "UPTAE_T", "UPTAE_S"] = "UPTAE_T"
     upt_autoencoder_kwargs: dict = {}
     upt_autoencoder_checkpoint_path: str
-    upt_approximator_type: Literal["UPTA_M", "UPTA_T", "UPTA_S"] = "UPTA_T"
+    upt_approximator_type: Literal["UPTCA_M", "UPTCA_T", "UPTCA_S"] = "UPTCA_T"
     upt_approximator_kwargs: dict = {}
     device: Literal["cpu", "cuda"] = "cuda"
 

@@ -95,6 +95,7 @@ def UPTCA_M(**kwargs):
         depth=2,
         num_heads=2,
         dim=96,
+        num_input_tokens=8,
         num_output_tokens=8,
         **kwargs,
     )
@@ -105,6 +106,7 @@ def UPTCA_T(**kwargs):
         depth=4,
         num_heads=4,
         dim=96,
+        num_input_tokens=16,
         num_output_tokens=16,
         **kwargs,
     )
@@ -115,6 +117,7 @@ def UPTCA_S(**kwargs):
         depth=4,
         num_heads=4,
         dim=192,
+        num_input_tokens=32,
         num_output_tokens=32,
         **kwargs,
     )

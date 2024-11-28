@@ -187,28 +187,37 @@ class AutoEncoderUPTEngine(ModelEngine):
 class NextFrameUPTEngine(ModelEngine):   
     def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
         super().__init__(model, run_object)
+        self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
-    def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+    def _train_step(self, context_frames: Tensor, next_frame: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
+        
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x)
-            _loss = self.criterion(_pred, _y)
-        self.scaler.scale(_loss).backward()
+            x_next_pred, x_next = self.model.forward_train(context_frames, next_frame)
+            loss = self.criterion(x_next_pred, x_next)
+            
+        self.scaler.scale(loss).backward()           
         self.scaler.step(self.optimizer)
         self.scaler.update()
         
         if (self.scheduler is not None) and self.scheduler_step_on_batch:
             self.scheduler.step()
         
-        return {"loss": _loss.item()}
+        return {"loss": loss.item()}
     
     @torch.no_grad()
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+    def _eval_step(self, x: Tensor, y: Tensor) -> dict[str, float]:
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.eval_model(_x)
-            _loss = self.criterion(_pred, _y)
-        
+            frames = self.eval_model.rollout_frames(
+                x,
+                y.shape[1],
+            )
+            
         if self.metrics is not None:
-            self.metrics.update(_pred, _y)
+            self.metrics.update(frames, y)
         
-        return {"loss": _loss.item()}
+        return {}
+    
+    @staticmethod
+    def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
+        wandb.log(eval_outs, step=step)
