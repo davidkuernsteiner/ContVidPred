@@ -48,7 +48,7 @@ class NextFrameUPTModel(nn.Module):
         bs, cl, _, _, _ = x.shape
         
         # Encode frames
-        x = rearrange(x, 'bs cl ch he wi -> (bs cl) ch ht wt')
+        x = rearrange(x, 'bs cl ch ht wt -> (bs cl) ch ht wt')
         with torch.no_grad():
             x = self.autoencoder.encode(x)  
         x = rearrange(x, '(bs cl) nt di -> bs cl nt di', bs=bs, cl=cl)
@@ -63,7 +63,7 @@ class NextFrameUPTModel(nn.Module):
         bs, cl, ch, ht, wt = x_context.shape
         
         # Encode context frames
-        x_context = rearrange(x_context, 'bs cl ch he wi -> (bs cl) ch ht wt')
+        x_context = rearrange(x_context, 'bs cl ch ht wt -> (bs cl) ch ht wt')
         x_context = self.autoencoder.encode(x_context)  
         x_context = rearrange(x_context, '(bs cl) nt di -> bs cl nt di', bs=bs, cl=cl)
         
