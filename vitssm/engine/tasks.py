@@ -198,7 +198,7 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
             "ndim time height width -> (time height width) ndim",
         ).float().to(self.device)
 
-        dims = torch.Tensor([t, h, w], device=self.device)
+        dims = torch.tensor([t, h, w]).to(self.device)
         output_pos = output_pos / (dims - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
@@ -223,7 +223,7 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
             "ndim time height width -> (time height width) ndim",
         ).float().to(self.device)
 
-        dims = torch.Tensor([t, h, w], device=self.device)
+        dims = torch.tensor([t, h, w]).to(self.device)
         output_pos = output_pos / (dims - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
