@@ -483,6 +483,7 @@ class UPTVideoAutoencoder(nn.Module):
         return torch.clamp(pred, -1, 1)
     
     def encode(self, x: Tensor):
+        x = einops.rearrange(x, "b t c h w -> b c t h w")
         return self.encoder(x)
     
     def decode(self, latent: Tensor, output_pos: Tensor):
