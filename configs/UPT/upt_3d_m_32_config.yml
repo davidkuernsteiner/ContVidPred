@@ -5,7 +5,7 @@ tags: ['upt', 'vmdsprites', 'micro']
 log_freq: 50
 eval_freq: 50
 checkpoint_freq: 9999999999999
-seed: 421
+seed: 1234
 
 dataset:
   name: 'vmdsprites-nextframe'
@@ -21,8 +21,8 @@ dataset:
   num_workers: 8
   persistent_workers: True
   pin_memory: True
-  batch_size: 128
-  val_batch_size: 16
+  batch_size: 64
+  val_batch_size: 32
   rollout_length: 16
 
 optimization:
@@ -35,15 +35,15 @@ optimization:
              weight_decay: 0.01}
   scheduler:
     name: 'LambdaLR'
-    kwargs: {warmup_steps: 3000,
-             decay_steps: 27000,
-             gamma: 0.01}
+    kwargs: {warmup_steps: 5000,
+             decay_steps: 45000,
+             gamma: 0.1}
     step_on_batch: True
   #scheduler:
   #  name: 'StepLR'
   #  kwargs: {step_size: 1, gamma: 1.0}
   #  step_on_batch: False
-  steps: 30000
+  steps: 50000
 
 metrics:
   SSIM:
