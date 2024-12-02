@@ -145,7 +145,7 @@ class NextFrameUPT3DModel(nn.Module):
         x = []
         for _ in range(n_steps):
             x_next_pred = self.approximator(x_context)
-            x.append(x_next_pred.clone())
+            x.append(x_next_pred.clone().unsqueeze(1))
             x_context = x_next_pred
         
         x = torch.cat(x, dim=1)
