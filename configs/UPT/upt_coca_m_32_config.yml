@@ -1,6 +1,6 @@
 project: 'ViTSSM'
 group: 'UPT'
-name: 'vmdsprites-UPT_CoPe_M-32'
+name: 'vmdsprites-UPT_CoCa_M-32'
 tags: ['upt', 'vmdsprites', 'micro']
 log_freq: 50
 eval_freq: 50
@@ -63,5 +63,5 @@ model:
   upt_autoencoder_type: 'UPTAE_M'
   upt_autoencoder_kwargs: {}
   upt_autoencoder_checkpoint_path: '/content/drive/MyDrive/data/checkpoints/ViTSSM/UPT/vmdsprites-UPT_AE_M-32.pth'
-  upt_approximator_type: 'UPTCoPeA_M'
+  upt_approximator_type: 'UPTCoCaA_M'
   upt_approximator_kwargs: {context_length: 4}
