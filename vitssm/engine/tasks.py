@@ -196,7 +196,7 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
         output_pos = rearrange(
             torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(h)], indexing="ij")),
             "ndim time height width -> (time height width) ndim",
-        ).float()
+        ).float().to(self.device)
 
         dims = torch.Tensor([t, h, w])
         output_pos = output_pos / (dims - 1) * 1000
@@ -221,7 +221,7 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
         output_pos = rearrange(
             torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(h)], indexing="ij")),
             "ndim time height width -> (time height width) ndim",
-        ).float()
+        ).float().to(self.device)
 
         dims = torch.Tensor([t, h, w])
         output_pos = output_pos / (dims - 1) * 1000
