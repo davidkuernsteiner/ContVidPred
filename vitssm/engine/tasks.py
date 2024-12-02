@@ -202,7 +202,7 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
         output_pos = output_pos / (dims - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))
+            _pred = self.model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
             _loss = self.criterion(_pred, _x)
             
         self.scaler.scale(_loss).backward()
@@ -227,7 +227,7 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
         output_pos = output_pos / (dims - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))
+            _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
         
         if self.metrics is not None:
             self.metrics.update(_pred, _x)
