@@ -89,3 +89,80 @@ class NextFrameUPTModel(nn.Module):
         
         return x
         
+        
+class NextFrameUPT3DModelConfig(BaseModel):
+    upt_autoencoder_type: Literal["UPTVAE_M", "UPTVAE_T"] = "UPTVAE_M"
+    upt_autoencoder_kwargs: dict = {}
+    upt_autoencoder_checkpoint_path: str
+    upt_approximator_type: Literal["UPTA_M", "UPTA_T"] = "UPTA_M"
+    upt_approximator_kwargs: dict = {}
+    device: Literal["cpu", "cuda"] = "cuda"
+
+
+class NextFrameUPT3DModel(nn.Module):
+    def __init__(
+        self,
+        upt_autoencoder_type: Literal["UPTVAE_M", "UPTVAE_T"] = "UPTVAE_M",
+        upt_autoencoder_kwargs: dict = {},
+        upt_autoencoder_checkpoint_path: str | None = None,
+        upt_approximator_type: Literal["UPTA_M", "UPTA_T"] = "UPTA_M",
+        upt_approximator_kwargs: dict = {},
+        device: Literal["cpu", "cuda"] = "cuda",
+    ):
+        super().__init__()
+        
+        self.autoencoder = upt_autoencoder_models[upt_autoencoder_type](**upt_autoencoder_kwargs)
+        self.approximator = upt_approximator_models[upt_approximator_type](**upt_approximator_kwargs)
+        
+        if upt_autoencoder_checkpoint_path is not None:
+            checkpoint = torch.load(upt_autoencoder_checkpoint_path)
+            self.autoencoder.load_state_dict(
+                ema_to_model_state_dict(checkpoint["ema"]) if "ema" in checkpoint.keys() else checkpoint["model"]
+            )
+            self.autoencoder.requires_grad_(False)
+        
+        self.device = device
+        
+    def forward_train(self, context_frames: Tensor, next_frame: Tensor):
+        x = torch.cat((context_frames, next_frame), dim=1)
+        x_prev, x_next = x[:, :-1], x[:, 1:]
+        bs, cl, _, _, _ = x_prev.shape
+        
+        # Encode frames
+        with torch.no_grad():
+            x_prev, x_next = self.autoencoder.encode(x_prev), self.autoencoder.encode(x_next)
+        
+        x_next_pred = self.approximator(x_prev)
+        
+        return x_next_pred, x_next
+    
+    def rollout_frames(self, x_context: Tensor, n_steps: int,):
+        bs, cl, ch, ht, wt = x_context.shape
+        
+        # Encode context frames
+        x_context = self.autoencoder.encode(x_context)  
+        
+        x = []
+        for _ in range(n_steps):
+            x_next_pred = self.approximator(x_context)
+            x.append(x_next_pred.clone())
+            x_context = x_next_pred
+        
+        x = torch.cat(x, dim=1)
+        bs, nf, nt, di = x.shape
+        
+        x = rearrange(x, "bs nf nt di -> (bs nf) nt di")
+        
+        output_pos = rearrange(
+            torch.stack(torch.meshgrid([torch.arange(cl), torch.arange(ht), torch.arange(wt)], indexing="ij")),
+            "ndim time height width -> (time height width) ndim",
+        ).float().to(self.device)
+
+        dims = torch.tensor([cl, ht, wt]).to(self.device)
+        output_pos = output_pos / (dims - 1) * 1000
+        
+        x = self.autoencoder.decode(x, output_pos=repeat(output_pos, "... -> b ...", b=bs*nf))
+        x = rearrange(x, "(bs nf) cl ch ht wt -> bs nf cl ch ht wt", bs=bs, nf=nf)
+        x = x[:, :, -1]
+        
+        return x

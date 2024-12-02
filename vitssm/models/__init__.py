@@ -4,10 +4,9 @@ from torch.nn import Module
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 
 from .vae import VideoVAEConfig
-#from .latte import LatteDiffusionModelConfig, LatteDiffusionModel
-from .dit import NextFrameDiTModelConfig, NextFrameDiTModel
-from .unet import UncondUNetModel, UncondUNetModelConfig, NextFrameUNetModel, NextFrameUNetModelConfig, BasicNextFrameUNetModel, BasicNextFrameUNetModelConfig
-from .upt import NextFrameUPTModel, NextFrameUPTModelConfig, UPTImageAutoencoder, UPTImageAutoencoderConfig, UPTVideoAutoencoder, UPTVideoAutoencoderConfig
+from .dit import *
+from .unet import *
+from .upt import *
 
 
 def build_model(config: DictConfig) -> Module:
@@ -56,6 +55,11 @@ def build_model(config: DictConfig) -> Module:
         case "upt_next_frame":
             model_config = NextFrameUPTModelConfig(**config)
             model = NextFrameUPTModel(**model_config.model_dump())
+            return model
+        
+        case "upt_3d_next_frame":
+            model_config = NextFrameUPT3DModelConfig(**config)
+            model = NextFrameUPT3DModel(**model_config.model_dump())
             return model
         
         case _:

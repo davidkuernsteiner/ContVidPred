@@ -1,0 +1,67 @@
+project: 'ViTSSM'
+group: 'UPT'
+name: 'vmdsprites-UPT_3D_M-32'
+tags: ['upt', 'vmdsprites', 'micro']
+log_freq: 50
+eval_freq: 50
+checkpoint_freq: 9999999999999
+seed: 421
+
+dataset:
+  name: 'vmdsprites-nextframe'
+  load_in_memory: True
+  mode: 'train'
+  fold: '0'
+  output_format: 'TCHW'
+  num_frames: 5
+  context_length: 4
+  frame_interval: 1
+  resolution: 32
+  train_percentage: 1.0
+  num_workers: 8
+  persistent_workers: True
+  pin_memory: True
+  batch_size: 128
+  val_batch_size: 128
+  rollout_length: 16
+
+optimization:
+  loss:
+    name: 'MSELoss'
+    kwargs: {}
+  optimizer:
+    name: 'AdamW'
+    kwargs: {lr: 0.001,
+             weight_decay: 0.01}
+  scheduler:
+    name: 'LambdaLR'
+    kwargs: {warmup_steps: 1000,
+             decay_steps: 29000,
+             gamma: 0.1}
+    step_on_batch: True
+  #scheduler:
+  #  name: 'StepLR'
+  #  kwargs: {step_size: 1, gamma: 1.0}
+  #  step_on_batch: False
+  steps: 30000
+
+metrics:
+  SSIM:
+    name: 'StructuralSimilarityIndexMeasure'
+    kwargs: {}
+  PSNR:
+    name: 'PeakSignalNoiseRatio'
+    kwargs: {}
+
+model:
+  name: 'upt_3d_next_frame'
+  device: 'cuda'
+  use_amp: False
+  use_ema: False
+  ema_steps: 1
+
+  upt_autoencoder_type: 'UPTVAE_M'
+  upt_autoencoder_kwargs: {resolution: [4, 32, 32]}
+  upt_autoencoder_checkpoint_path: '/content/drive/MyDrive/data/checkpoints/ViTSSM/UPT/vmdsprites-UPT_VAE_M-32.pth'
+  upt_approximator_type: 'UPTA_M'
+  upt_approximator_kwargs: {}
