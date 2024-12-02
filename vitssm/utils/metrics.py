@@ -67,8 +67,8 @@ class VideoAutoEncoderMetricCollectionWrapper:
     def compute(self) -> dict:
         samples = {
             "ground truth vs. prediction": [
-                wandb.Image(self.sample),
-                wandb.Image(self.sample_pred),
+                wandb.Video(self.sample,fps=4),
+                wandb.Video(self.sample_pred, fps=4),
             ],
         }
             
