@@ -21,8 +21,8 @@ dataset:
   num_workers: 8
   persistent_workers: True
   pin_memory: True
-  batch_size: 256
-  val_batch_size: 256
+  batch_size: 128
+  val_batch_size: 128
   rollout_length: 16
 
 optimization:

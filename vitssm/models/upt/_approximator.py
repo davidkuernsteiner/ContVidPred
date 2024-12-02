@@ -80,10 +80,12 @@ class UPTContextPercApproximator(nn.Module):
         x = rearrange(x, "bs cl nt di -> (bs nt) cl di")
         x = self.temp_pos_embed(x)
         x = rearrange(x, "(bs nt) cl di -> bs (cl nt) di", bs=b, cl=c, nt=t)
-        x = self.temp_pool(x)
 
         # apply blocks
         x = self.blocks(x, **cond_kwargs)
+        
+        #temporal pooling
+        x = self.temp_pool(x)
 
         return x
     
@@ -109,20 +111,17 @@ class UPTContextCatApproximator(nn.Module):
         self.cond_dim = cond_dim
         self.init_weights = init_weights
 
-        # project
-        self.input_proj = LinearProjection(input_dim * context_length, dim, init_weights=init_weights)
-
         # blocks
         if cond_dim is None:
             block_ctor = PrenormBlock
         else:
             block_ctor = partial(DitBlock, cond_dim=cond_dim)
             
-        # Temporal pooling
-        #self.final_layer = Sequential(
-        #    nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6),
-        #    LinearProjection(context_length * dim, dim, bias=True, init_weights=init_weights),
-        #)
+        self.context_proj = Sequential(
+            block_ctor(dim=context_length * dim, num_heads=num_heads, init_weights=init_weights),
+            nn.LayerNorm(context_length * dim, elementwise_affine=False, eps=1e-6),
+            LinearProjection(context_length * dim, dim, bias=True, init_weights=init_weights),
+        )
             
         self.blocks = Sequential(
             *[
@@ -146,15 +145,12 @@ class UPTContextCatApproximator(nn.Module):
         if condition is not None:
             cond_kwargs["cond"] = condition
 
-        # project to decoder dim
-        x = rearrange(x, "bs cl nt di -> bs nt (cl di)")
-        x = self.input_proj(x)
-        
         # concat context tokens along latent dimension
+        x = rearrange(x, "bs cl nt di -> bs nt (cl di)")
+        x = self.context_proj(x)
+        
         # apply blocks
         x = self.blocks(x, **cond_kwargs)
-        # project down to single latent representation
-        #x = self.final_layer(x)
 
         return x
     
