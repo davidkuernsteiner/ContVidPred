@@ -12,7 +12,7 @@ import wandb
 from . import ModelEngine
 from ..models import UncondUNetModel, NextFrameUNetModel, NextFrameDiTModel
 from ..models.vae import frange_cycle_linear
-from ..utils.metrics import RolloutMetricCollectionWrapper, AutoEncoderMetricCollectionWrapper
+from ..utils.metrics import RolloutMetricCollectionWrapper, AutoEncoderMetricCollectionWrapper, VideoAutoEncoderMetricCollectionWrapper
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 #from latte.utils import clip_grad_norm_	
     
@@ -170,6 +170,61 @@ class AutoEncoderUPTEngine(ModelEngine):
             "ndim height width -> (height width) ndim",
         ).float().to(self.device)
         output_pos = output_pos / (h - 1) * 1000
+        
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))
+        
+        if self.metrics is not None:
+            self.metrics.update(_pred, _x)
+        
+        return {}
+    
+    @staticmethod
+    def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
+        wandb.log(eval_outs, step=step)
+
+
+class VideoAutoEncoderUPTEngine(ModelEngine):   
+    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
+        super().__init__(model, run_object)
+        self.metrics = VideoAutoEncoderMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
+    
+    def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        self.optimizer.zero_grad()
+        b, t, c, h, w = _x.shape
+        
+        output_pos = rearrange(
+            torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(h)], indexing="ij")),
+            "ndim time height width -> (time height width) ndim",
+        ).float()
+
+        dims = torch.Tensor([t, h, w])
+        output_pos = output_pos / (dims - 1) * 1000
+        
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))
+            _loss = self.criterion(_pred, _x)
+            
+        self.scaler.scale(_loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+        
+        if (self.scheduler is not None) and self.scheduler_step_on_batch:
+            self.scheduler.step()
+        
+        return {"loss": _loss.item()}
+    
+    @torch.no_grad()
+    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        b, t, c, h, w = _x.shape
+        
+        output_pos = rearrange(
+            torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(h)], indexing="ij")),
+            "ndim time height width -> (time height width) ndim",
+        ).float()
+
+        dims = torch.Tensor([t, h, w])
+        output_pos = output_pos / (dims - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b*t))

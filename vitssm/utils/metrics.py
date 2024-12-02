@@ -46,7 +46,38 @@ class AutoEncoderMetricCollectionWrapper:
         self.metrics.reset()
         self.sample = np.zeros(0)
         self.sample_pred = np.zeros(0)
+
+
+class VideoAutoEncoderMetricCollectionWrapper:
+    def __init__(self, metrics: MetricCollection) -> None:
+        """Calculate metrics over the T dimension of [N, T, ...] tensors."""
+        super().__init__()
+        self.metrics = metrics
+        self.sample = np.zeros(0)
+        self.sample_pred = np.zeros(0)
         
+    def update(self, x: Tensor, y: Tensor) -> None:
+        sample_idx = random.randint(0, x.size(0) - 1)
+        self.sample_pred = model_output_to_video(x.clone()[sample_idx])
+        self.sample = model_output_to_video(y.clone()[sample_idx])
+        x = rearrange(x, "b t c h w -> (b t) c h w")
+        y = rearrange(y, "b t c h w -> (b t) c h w")
+        self.metrics.update(x, y)
+        
+    def compute(self) -> dict:
+        samples = {
+            "ground truth vs. prediction": [
+                wandb.Image(self.sample),
+                wandb.Image(self.sample_pred),
+            ],
+        }
+            
+        return self.metrics.compute() | samples
+    
+    def reset(self) -> None:
+        self.metrics.reset()
+        self.sample = np.zeros(0)
+        self.sample_pred = np.zeros(0)    
         
 
 class RolloutMetricCollectionWrapper:

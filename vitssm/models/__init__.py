@@ -7,7 +7,7 @@ from .vae import VideoVAEConfig
 #from .latte import LatteDiffusionModelConfig, LatteDiffusionModel
 from .dit import NextFrameDiTModelConfig, NextFrameDiTModel
 from .unet import UncondUNetModel, UncondUNetModelConfig, NextFrameUNetModel, NextFrameUNetModelConfig, BasicNextFrameUNetModel, BasicNextFrameUNetModelConfig
-from .upt import NextFrameUPTModel, NextFrameUPTModelConfig, UPTImageAutoencoder, UPTImageAutoencoderConfig
+from .upt import NextFrameUPTModel, NextFrameUPTModelConfig, UPTImageAutoencoder, UPTImageAutoencoderConfig, UPTVideoAutoencoder, UPTVideoAutoencoderConfig
 
 
 def build_model(config: DictConfig) -> Module:
@@ -46,6 +46,11 @@ def build_model(config: DictConfig) -> Module:
         case "upt_ae":
             model_config = UPTImageAutoencoderConfig(**config)
             model = UPTImageAutoencoder(**model_config.model_dump())
+            return model
+        
+        case "upt_vae":
+            model_config = UPTVideoAutoencoderConfig(**config)
+            model = UPTVideoAutoencoder(**model_config.model_dump())
             return model
         
         case "upt_next_frame":
