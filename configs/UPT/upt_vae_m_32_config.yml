@@ -33,9 +33,9 @@ optimization:
              weight_decay: 0.01}
   scheduler:
     name: 'LambdaLR'
-    kwargs: {warmup_steps: 1000,
-             decay_steps: 29000,
-             gamma: 0.1}
+    kwargs: {warmup_steps: 3000,
+             decay_steps: 27000,
+             gamma: 0.01}
     step_on_batch: True
   #scheduler:
   #  name: 'StepLR'

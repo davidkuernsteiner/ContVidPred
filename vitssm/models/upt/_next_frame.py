@@ -123,14 +123,12 @@ class NextFrameUPT3DModel(nn.Module):
         
         self.device = device
         
-    def forward_train(self, context_frames: Tensor, next_frame: Tensor):
-        x = torch.cat((context_frames, next_frame), dim=1)
-        x_prev, x_next = x[:, :-1], x[:, 1:]
-        bs, cl, _, _, _ = x_prev.shape
+    def forward_train(self, context_frames: Tensor, next_frames: Tensor):
+        bs, cl, _, _, _ = context_frames.shape
         
         # Encode frames
         with torch.no_grad():
-            x_prev, x_next = self.autoencoder.encode(x_prev), self.autoencoder.encode(x_next)
+            x_prev, x_next = self.autoencoder.encode(context_frames), self.autoencoder.encode(next_frames)
         
         x_next_pred = self.approximator(x_prev)
         
@@ -143,7 +141,7 @@ class NextFrameUPT3DModel(nn.Module):
         x_context = self.autoencoder.encode(x_context)  
         
         x = []
-        for _ in range(n_steps):
+        for _ in range(n_steps // self.autoencoder.encoder.resolution[0]):
             x_next_pred = self.approximator(x_context)
             x.append(x_next_pred.clone().unsqueeze(1))
             x_context = x_next_pred
@@ -162,7 +160,6 @@ class NextFrameUPT3DModel(nn.Module):
         output_pos = output_pos / (dims - 1) * 1000
         
         x = self.autoencoder.decode(x, output_pos=repeat(output_pos, "... -> b ...", b=bs*nf))
-        x = rearrange(x, "(bs nf) cl ch ht wt -> bs nf cl ch ht wt", bs=bs, nf=nf)
-        x = x[:, :, -1]
+        x = rearrange(x, "(bs nf) cl ch ht wt -> bs (nf cl) ch ht wt", bs=bs, nf=nf)
         
         return x

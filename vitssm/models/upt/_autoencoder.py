@@ -58,6 +58,7 @@ class EncoderImage(nn.Module):
             patch_size=patch_size,
         )
         self.pos_embed = VitPosEmbed2d(seqlens=self.patch_embed.seqlens, dim=enc_dim, is_learnable=False)
+        self.layer_norm = nn.LayerNorm(enc_dim, eps=1e-6)
 
         # blocks
         if cond_dim is None:
@@ -123,7 +124,7 @@ class EncoderImage(nn.Module):
         if self.perceiver is not None:
             x = self.perceiver(kv=x, **cond_kwargs)
 
-        return x
+        return self.layer_norm(x)
     
 
 class EncoderVideo(nn.Module):
@@ -162,6 +163,7 @@ class EncoderVideo(nn.Module):
             patch_size=patch_size,
         )
         self.pos_embed = VitPosEmbed3d(seqlens=self.patch_embed.seqlens, dim=enc_dim, is_learnable=False)
+        self.layer_norm = nn.LayerNorm(enc_dim, eps=1e-6)
 
         # blocks
         if cond_dim is None:
@@ -227,7 +229,7 @@ class EncoderVideo(nn.Module):
         if self.perceiver is not None:
             x = self.perceiver(kv=x, **cond_kwargs)
 
-        return x
+        return self.layer_norm(x)
     
 
 #Adapted from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/decoder_perceiver.py
