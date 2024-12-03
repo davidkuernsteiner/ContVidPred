@@ -29,6 +29,7 @@ class UPTApproximator(nn.Module):
 
         # project
         self.input_proj = LinearProjection(input_dim, dim, init_weights=init_weights, optional=True)
+        self.layer_norm = nn.LayerNorm(dim, eps=1e-6)
 
         # blocks
         if cond_dim is None:
@@ -63,7 +64,7 @@ class UPTApproximator(nn.Module):
         # apply blocks
         x = self.blocks(x, **cond_kwargs)
 
-        return x
+        return self.layer_norm(x)
     
     
 #Adapted from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/approximator.py
