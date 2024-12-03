@@ -553,7 +553,7 @@ def UPTVAE_T(**kwargs):
         depth=8,
         perc_dim=96,
         perc_num_heads=4,
-        num_latent_tokens=64,
+        num_latent_tokens=32,
     )
     
 upt_autoencoder_models = {

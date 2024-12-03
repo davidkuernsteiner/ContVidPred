@@ -1,0 +1,63 @@
+project: 'ViTSSM'
+group: 'UPT'
+name: 'vmdsprites-UPT_3D_T-32'
+tags: ['upt', 'vmdsprites', 'tiny']
+log_freq: 50
+eval_freq: 100
+checkpoint_freq: 9999999999999
+seed: 123
+
+dataset:
+  name: 'vmdsprites-nextframe'
+  load_in_memory: True
+  mode: 'train'
+  fold: '0'
+  output_format: 'TCHW'
+  num_frames: 8
+  context_length: 4
+  frame_interval: 1
+  resolution: 32
+  train_percentage: 1.0
+  num_workers: 8
+  persistent_workers: True
+  pin_memory: True
+  batch_size: 64
+  val_batch_size: 32
+  rollout_length: 16
+
+optimization:
+  loss:
+    name: 'L1Loss'
+    kwargs: {}
+  optimizer:
+    name: 'AdamW'
+    kwargs: {lr: 0.001,
+             weight_decay: 0.01}
+  scheduler:
+    name: 'warm_cos_decay_scheduler'
+    kwargs: {warmup_steps: 10000,
+             decay_steps: 90000,
+             gamma: 0.0}
+    step_on_batch: True
+  steps: 100000
+
+metrics:
+  SSIM:
+    name: 'StructuralSimilarityIndexMeasure'
+    kwargs: {}
+  PSNR:
+    name: 'PeakSignalNoiseRatio'
+    kwargs: {}
+
+model:
+  name: 'upt_3d_next_frame'
+  device: 'cuda'
+  use_amp: False
+  use_ema: False
+  ema_steps: 1
+
+  upt_autoencoder_type: 'UPTVAE_T'
+  upt_autoencoder_kwargs: {resolution: [4, 32, 32]}
+  upt_autoencoder_checkpoint_path: '/content/drive/MyDrive/data/checkpoints/ViTSSM/UPT/vmdsprites-UPT_VAE_T-32.pth'
+  upt_approximator_type: 'UPTA_T'
+  upt_approximator_kwargs: {}

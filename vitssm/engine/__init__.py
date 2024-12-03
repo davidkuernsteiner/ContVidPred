@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from typing import Any, Union
 
+import numpy as np
 import torch
 from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
@@ -227,18 +228,32 @@ def get_optimizer(
 
 def get_scheduler(optimizer: Optimizer, config: DictConfig) -> LRScheduler:
     """Builds learning rate scheduler."""
-    if config.optimization.scheduler.name == "LambdaLR":
+    if config.optimization.scheduler.name == "warm_exp_decay_scheduler":
         warmup_steps = config.optimization.scheduler.kwargs.get("warmup_steps", 10000)
-        decay_steps = config.optimization.scheduler.kwargs.get("decay_steps", 100000)
-        scheduler_gamma = config.optimization.scheduler.kwargs.get("gamma", 0.5)
+        decay_steps = config.optimization.scheduler.kwargs.get("decay_steps", 90000)
+        scheduler_gamma = config.optimization.scheduler.kwargs.get("gamma", 0.1)
 
-        def warm_and_decay_lr_scheduler(step: int):
+        def warm_and_exp_decay_lr(step: int):
             if step < warmup_steps:
                 return step / warmup_steps
 
-            return scheduler_gamma ** (step / decay_steps)
+            return scheduler_gamma ** (step / decay_steps - warmup_steps / decay_steps)
 
-        _scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warm_and_decay_lr_scheduler)
+        _scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warm_and_exp_decay_lr)
+        return _scheduler
+    
+    elif config.optimization.scheduler.name == "warm_cos_decay_scheduler":
+        warmup_steps = config.optimization.scheduler.kwargs.get("warmup_steps", 10000)
+        decay_steps = config.optimization.scheduler.kwargs.get("decay_steps", 90000)
+        scheduler_gamma = config.optimization.scheduler.kwargs.get("gamma", 0.0)
+
+        def warm_and_cosine_decay_lr(step: int):
+            if step < warmup_steps:
+                return step / warmup_steps
+
+            return scheduler_gamma + 0.5 * (1 - scheduler_gamma) * (1 + np.cos((step / decay_steps - warmup_steps / decay_steps) * np.pi))
+
+        _scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warm_and_cosine_decay_lr)
         return _scheduler
 
     _scheduler = getattr(torch.optim.lr_scheduler, config.optimization.scheduler.name)(
