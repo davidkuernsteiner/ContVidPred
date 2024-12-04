@@ -134,7 +134,13 @@ class NextFrameUPT3DModel(nn.Module):
         
         return x_next_pred, x_next
     
-    def rollout_frames(self, x_context: Tensor, n_steps: int,):
+    def rollout_frames(
+        self,
+        x_context: Tensor,
+        n_steps: int,
+        spatial_scale: int = 1,
+        temporal_scale: int = 1,
+    ):
         bs, cl, ch, ht, wt = x_context.shape
         
         # Encode context frames
@@ -152,11 +158,20 @@ class NextFrameUPT3DModel(nn.Module):
         x = rearrange(x, "bs nf nt di -> (bs nf) nt di")
         
         output_pos = rearrange(
-            torch.stack(torch.meshgrid([torch.arange(cl), torch.arange(ht), torch.arange(wt)], indexing="ij")),
+            torch.stack(
+                torch.meshgrid(
+                    [
+                        torch.arange(int(cl * temporal_scale)),
+                        torch.arange(int(ht * spatial_scale)),
+                        torch.arange(int(wt * spatial_scale))
+                    ], 
+                indexing="ij"
+                )   
+            ),
             "ndim time height width -> (time height width) ndim",
         ).float().to(self.device)
 
-        dims = torch.tensor([cl, ht, wt]).to(self.device)
+        dims = torch.tensor([int(cl * temporal_scale), int(ht * spatial_scale), int(wt * spatial_scale)]).to(self.device)
         output_pos = output_pos / (dims - 1) * 1000
         
         x = self.autoencoder.decode(x, output_pos=repeat(output_pos, "... -> b ...", b=bs*nf))
