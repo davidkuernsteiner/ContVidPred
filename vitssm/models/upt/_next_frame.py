@@ -165,7 +165,7 @@ class NextFrameUPT3DModel(nn.Module):
                         torch.arange(int(ht * spatial_scale)),
                         torch.arange(int(wt * spatial_scale))
                     ], 
-                indexing="ij"
+                    indexing="ij",
                 )   
             ),
             "ndim time height width -> (time height width) ndim",
