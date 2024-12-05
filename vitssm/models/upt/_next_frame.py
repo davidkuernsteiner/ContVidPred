@@ -134,6 +134,7 @@ class NextFrameUPT3DModel(nn.Module):
         
         return x_next_pred, x_next
     
+    @torch.no_grad()
     def rollout_frames(
         self,
         x_context: Tensor,
