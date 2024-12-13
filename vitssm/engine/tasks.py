@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from omegaconf.dictconfig import DictConfig
 from torch import Tensor, nn
+import torchvision.transforms.v2.functional as F
 from einops import rearrange, repeat
 
 from wandb.sdk.wandb_run import Run
@@ -216,6 +217,56 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        b, t, c, h, w = _x.shape
+        
+        output_pos = rearrange(
+            torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(h)], indexing="ij")),
+            "ndim time height width -> (time height width) ndim",
+        ).float().to(self.device)
+
+        dims = torch.tensor([t, h, w]).to(self.device)
+        output_pos = output_pos / (dims - 1) * 1000
+        
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
+        
+        if self.metrics is not None:
+            self.metrics.update(_pred, _x)
+        
+        return {}
+    
+    @staticmethod
+    def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
+        wandb.log(eval_outs, step=step)
+        
+        
+class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):   
+    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
+        super().__init__(model, run_object)
+        self.metrics = VideoAutoEncoderMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
+    
+    def _train_step(self, _x: Tensor, _y: dict[str, Tensor]) -> dict[str, float]:
+        self.model.decoder.unbatch_mode = "none"
+        self.optimizer.zero_grad()
+        b, t, c, h, w = _x.shape
+        coords, values = _y["coords"], _y["values"]
+        
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            _pred = self.model(_x, output_pos=coords)
+            _loss = self.criterion(_pred, values)
+            
+        self.scaler.scale(_loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+        
+        if (self.scheduler is not None) and self.scheduler_step_on_batch:
+            self.scheduler.step()
+        
+        return {"loss": _loss.item()}
+    
+    @torch.no_grad()
+    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        self.model.decoder.unbatch_mode = "video"
         b, t, c, h, w = _x.shape
         
         output_pos = rearrange(

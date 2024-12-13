@@ -310,6 +310,8 @@ class UCFCenterCropVideo:
             torch.tensor: scale resized / center cropped video clip.
                 size is (T, C, crop_size, crop_size)
         """
+        if clip.size(-1) == self.size[-1]:
+            return clip
         clip_resize = resize_scale(clip=clip, target_size=self.size, interpolation_mode=self.interpolation_mode)
         clip_center_crop = center_crop(clip_resize, self.size)
         return clip_center_crop

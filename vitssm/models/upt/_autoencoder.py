@@ -332,12 +332,8 @@ class DecoderPerceiver(nn.Module):
         x = self.perc(q=query, kv=x, **cond_kwargs)
         x = self.pred(x)
 
-        if self.unbatch_mode == "dense_to_sparse_unpadded":
-            # dense to sparse where no padding needs to be considered
-            x = einops.rearrange(
-                x,
-                "batch_size seqlen dim -> (batch_size seqlen) dim",
-            )
+        if self.unbatch_mode == "none":
+            x = x
 
         elif self.unbatch_mode == "image":
             # rearrange to square image

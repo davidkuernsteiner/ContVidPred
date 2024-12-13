@@ -83,7 +83,7 @@ def get_transforms_video(name="center", image_size=(256, 256)):
             [
                 transforms.ToTensorVideo(),  # TCHW
                 transforms.RandomHorizontalFlipVideo(),
-                transforms.UCFCenterCropVideo(image_size[0]),
+                transforms.UCFCenterCropVideo(image_size[0], interpolation_mode="bicubic"),
                 transforms_pt.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
             ]
         )

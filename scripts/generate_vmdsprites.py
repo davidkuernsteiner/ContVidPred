@@ -39,12 +39,9 @@ def main(
     train_ratio: float = 0.8,
 ) -> None:
     
-    if exist_ok:
-        data_folder = Path(output_dir) / f"VMDsprites_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    else:
-        data_folder = Path(output_dir) / "VMDsprites"
-        if data_folder.exists():
-            shutil.rmtree(data_folder)
+    data_folder = Path(output_dir)
+    if data_folder.exists():
+        shutil.rmtree(data_folder)
         
     os.makedirs(data_folder / "videos", exist_ok=True)
     os.makedirs(data_folder / "masks", exist_ok=True)
