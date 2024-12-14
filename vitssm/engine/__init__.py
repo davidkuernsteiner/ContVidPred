@@ -26,7 +26,7 @@ torch.backends.cudnn.allow_tf32 = True
 
 
 class ModelEngine:
-    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
+    def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
         super().__init__()
 
         self.config = run_object
@@ -73,6 +73,9 @@ class ModelEngine:
             self.eval_model = self.model
 
         self.state = {"step": 0, "epoch": 0}
+        
+        if resume:
+            self._resume_checkpoint()
         
         wandb.log({"Model Parameters": count_parameters(self.model)})
         

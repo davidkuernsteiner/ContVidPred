@@ -1,6 +1,8 @@
 project: 'ContVidPred'
 group: 'UPT'
 name: 'vmdsprites-0-UPT_VAE_T-cont'
+id: 'vmdsprites-0-UPT_VAE_T-cont_20241214_150239'
+resume: True
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 50
 eval_freq: 100
@@ -23,7 +25,7 @@ dataset:
   persistent_workers: True
   pin_memory: True
   batch_size: 64
-  val_batch_size: 64
+  val_batch_size: 16
 
 optimization:
   loss:

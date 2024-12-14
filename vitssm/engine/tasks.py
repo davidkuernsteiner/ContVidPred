@@ -241,8 +241,8 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
         
         
 class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):   
-    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
+    def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
+        super().__init__(model, run_object, resume=resume)
         self.metrics = VariableResVideoAutoEncoderMetricCollectionWrapper(
             self.metrics, 
             run_object.dataset.max_rescale_factor
