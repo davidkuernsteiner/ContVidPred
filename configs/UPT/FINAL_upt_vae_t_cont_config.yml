@@ -9,7 +9,7 @@ seed: 0
 
 dataset:
   name: 'vmdsprites-var-res-ae'
-  load_in_memory: True
+  load_in_memory: False
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
