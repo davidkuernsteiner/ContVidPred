@@ -96,8 +96,6 @@ class ModelEngine:
 
         done = False
         while not done:
-            self.state["epoch"] += 1
-
             self.eval_model.cpu()
             self.model.to(self.device)
             self.model.train()
@@ -151,6 +149,7 @@ class ModelEngine:
 
             self._save_checkpoint()
             gc.collect()
+            self.state["epoch"] += 1
 
     def eval(self) -> None:
         pass
@@ -205,6 +204,7 @@ class ModelEngine:
         self.model.load_state_dict(checkpoint["model"])
         self.optimizer.load_state_dict(checkpoint["optimizer"])
         self.scaler.load_state_dict(checkpoint["scaler"])
+        self.scheduler.load_state_dict(checkpoint["scheduler"]) if self.scheduler is not None else None
         self.state = checkpoint["state"]
 
     def _early_stopping_check(self) -> bool:
