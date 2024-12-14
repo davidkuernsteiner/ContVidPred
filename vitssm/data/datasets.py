@@ -33,54 +33,59 @@ class VariableResolutionAEDatasetWrapper:
             max_rescale_factor: int,
         ) -> None:
             super().__init__()
-    
+
             self.dataset = dataset
             self.res_x = res_x
             self.train = train
             self.max_rescale_factor = max_rescale_factor
-    
-        def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+
+        def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, torch.Tensor] | torch.Tensor]:
             outputs = self.dataset[index]
             if self.train:
                 rescale_factor = random.choice(list(range(1, self.max_rescale_factor + 1)))
             else:
                 rescale_factor = self.max_rescale_factor
-            
+  
             x = F.resize(outputs, self.res_x, interpolation=InterpolationMode.BICUBIC)
-            y = F.resize(outputs, self.res_x * rescale_factor, interpolation=InterpolationMode.BICUBIC)
-            
-            x_cl, _, x_ht, x_wt = x.shape
-            y_cl, _, y_ht, y_wt = y.shape
-            coords = rearrange(
-                torch.stack(
-                    torch.meshgrid(
-                        [
-                            torch.arange(int(y_cl)),
-                            torch.arange(int(y_ht)),
-                            torch.arange(int(y_wt))
-                        ], 
-                        indexing="ij",
-                    )   
-                ),
-                "ndim time height width -> (time height width) ndim",
-            ).float()
-            dims = torch.tensor([int(y_cl), int(y_ht), int(y_wt)])
-            coords = coords / (dims - 1) * 1000
-            
-            y_values = rearrange(y, "cl ch ht wt -> (cl ht wt) ch")
+            if outputs.size(-2) == self.res_x * rescale_factor:
+                y = outputs
+            else:
+                y = F.resize(outputs, self.res_x * rescale_factor, interpolation=InterpolationMode.BICUBIC)
             
             if self.train:
+                x_cl, _, x_ht, x_wt = x.shape
+                y_cl, _, y_ht, y_wt = y.shape
+                coords = rearrange(
+                    torch.stack(
+                        torch.meshgrid(
+                            [
+                                torch.arange(int(y_cl)),
+                                torch.arange(int(y_ht)),
+                                torch.arange(int(y_wt))
+                            ], 
+                            indexing="ij",
+                        )
+                    ),
+                    "ndim time height width -> (time height width) ndim",
+                ).float()
+                dims = torch.tensor([int(y_cl), int(y_ht), int(y_wt)])
+                coords = coords / (dims - 1) * 1000
+
+                y_values = rearrange(y, "cl ch ht wt -> (cl ht wt) ch")
+
                 subsample_idcs = torch.randperm(coords.size(0))[:x_cl*x_ht*x_wt]
                 coords = coords[subsample_idcs]
                 y_values = y_values[subsample_idcs]
+
+                return x, {"coords": coords, "values": y_values}
             
-            
-            return x, {"coords": coords, "values": y_values}
+            else:
+                return x, y
 
         def __len__(self) -> int:
             return len(self.dataset)
         
-        
+
 class AEDatasetWrapper:  
         def __init__(
             self,

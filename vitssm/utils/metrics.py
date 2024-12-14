@@ -9,6 +9,7 @@ import random
 from torchmetrics import Metric, MetricCollection
 import torchmetrics.image
 import wandb
+from copy import deepcopy
 
 from .visual import model_output_to_image, model_output_to_video
 
@@ -77,7 +78,45 @@ class VideoAutoEncoderMetricCollectionWrapper:
     def reset(self) -> None:
         self.metrics.reset()
         self.sample = np.zeros(0)
-        self.sample_pred = np.zeros(0)    
+        self.sample_pred = np.zeros(0)
+        
+
+class VariableResVideoAutoEncoderMetricCollectionWrapper:
+    def __init__(self, metrics: MetricCollection, max_rescale_factor: int) -> None:
+        """Calculate metrics over the T dimension of [N, T, ...] tensors."""
+        super().__init__()
+        self.metrics = [deepcopy(metrics) for _ in range(max_rescale_factor)]
+        self.samples = [np.zeros(0) for _ in range(max_rescale_factor)]
+        self.samples_pred = [np.zeros(0) for _ in range(max_rescale_factor)]
+        
+    def update(self, x: Tensor, y: Tensor, rescale_factor: int) -> None:
+        sample_idx = random.randint(0, x.size(0) - 1)
+        self.samples_pred[rescale_factor - 1] = model_output_to_video(x.clone()[sample_idx])
+        self.samples[rescale_factor - 1] = model_output_to_video(y.clone()[sample_idx])
+        x = rearrange(x, "b t c h w -> (b t) c h w")
+        y = rearrange(y, "b t c h w -> (b t) c h w")
+        self.metrics[rescale_factor - 1].update(x, y)
+        
+    def compute(self) -> dict:
+        outs = {}
+        for i in range(len(self.metrics)):
+            metrics = self.metrics[i].compute()
+            samples = {
+                "ground truth vs. prediction": [
+                    wandb.Video(self.samples[i],fps=4),
+                    wandb.Video(self.samples_pred[i], fps=4),
+                ],
+            }
+            
+            outs[f"rescale_factor_{i + 1}"] = metrics | samples
+            
+        return outs
+    
+    def reset(self) -> None:
+        for i in range(len(self.metrics)):
+            self.metrics[i].reset()
+            self.samples[i] = np.zeros(0)
+            self.samples_pred[i] = np.zeros(0)
         
 
 class RolloutMetricCollectionWrapper:
