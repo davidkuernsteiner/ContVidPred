@@ -27,7 +27,7 @@ dataset:
 
 optimization:
   loss:
-    name: 'MSELoss'
+    name: 'L1Loss'
     kwargs: {}
   optimizer:
     name: 'AdamW'

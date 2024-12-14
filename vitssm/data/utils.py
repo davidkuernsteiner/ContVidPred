@@ -83,7 +83,7 @@ def get_transforms_video(name="center", image_size=(256, 256)):
             [
                 transforms.ToTensorVideo(),  # TCHW
                 transforms.RandomHorizontalFlipVideo(),
-                transforms.UCFCenterCropVideo(image_size[0], interpolation_mode="bicubic"),
+                transforms.UCFCenterCropVideo(image_size[0], interpolation_mode="bilinear"),
                 transforms_pt.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
             ]
         )
@@ -93,6 +93,15 @@ def get_transforms_video(name="center", image_size=(256, 256)):
                 transforms.ToTensorVideo(),  # TCHW
                 transforms.ResizeCrop(image_size),
                 transforms_pt.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
+            ]
+        )
+    
+    elif name == "cont_center":
+        transform_video = transforms_pt.Compose(
+            [
+                transforms.ToTensorVideo(),  # TCHW
+                transforms.RandomHorizontalFlipVideo(),
+                transforms.UCFCenterCropVideo(image_size[0], interpolation_mode="bilinear")
             ]
         )
     else:

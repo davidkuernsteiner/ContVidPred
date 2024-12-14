@@ -99,7 +99,7 @@ class ModelEngine:
             self.model.train()
             
             for x, y in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state['epoch']}"):
-                train_outs = self._train_step(x.to(self.device), y.to(self.device))
+                train_outs = self._train_step(x, y)
                 self.state["step"] += 1
                 
                 if self.use_ema and (self.state["step"] % self.ema_steps == 0):
@@ -128,8 +128,8 @@ class ModelEngine:
                 self.eval_model.eval()
 
                 eval_metrics = defaultdict(list)
-                for x, y in eval_dataloader:
-                    eval_outs = self._eval_step(x.to(self.device), y.to(self.device))
+                for x, y in tqdm(eval_dataloader, total=len(eval_dataloader), desc=f"EVALUATION Epoch {self.state['epoch']}"):
+                    eval_outs = self._eval_step(x, y)
                     for k, v in eval_outs.items():
                         eval_metrics[k].append(v)
 

@@ -251,12 +251,15 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
     def _train_step(self, _x: Tensor, _y: dict[str, Tensor]) -> dict[str, float]:
         self.model.decoder.unbatch_mode = "none"
         self.optimizer.zero_grad()
-        b, t, c, h, w = _x.shape
+        
         coords, values = _y["coords"], _y["values"]
+        _x, coords, values = _x.to(self.device), coords.to(self.device), values.to(self.device)
+        
+        b, t, c, h, w = _x.shape
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x, output_pos=coords)
-            _loss = self.criterion(_pred, values)
+            _pred = self.model(_x.to(self.device), output_pos=coords.to(self.device))
+            _loss = self.criterion(_pred, values.to(self.device))
             
         self.scaler.scale(_loss).backward()
         self.scaler.step(self.optimizer)
@@ -269,16 +272,19 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
-        self.model.decoder.unbatch_mode = "video" 
+        self.model.decoder.unbatch_mode = "video"
+        _x, _y = _x.to(self.device), _y.to(self.device)
         b, x_t, c, x_h, x_w = _x.shape
         b, y_t, c, y_h, y_w = _y.shape
         
         for rescale_factor in range(1, y_h // x_h + 1):
             if x_h * rescale_factor == y_h:
-                y = _y
+                y = _y.clone()
             else:
-                y = F.resize(_y, (x_h * rescale_factor, x_w * rescale_factor), interpolation=F.InterpolationMode.BICUBIC) 
-                
+                y = F.resize(_y.clone(), (x_h * rescale_factor, x_w * rescale_factor), interpolation=F.InterpolationMode.BILINEAR)
+            
+            F.normalize(y, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
+            
             b, t, c, h, w = y.shape
             
             output_pos = rearrange(
@@ -293,7 +299,7 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
                 _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
         
             if self.metrics is not None:
-                self.metrics.update(_pred, _x, rescale_factor)
+                self.metrics.update(_pred, y, rescale_factor)
         
         return {}
     

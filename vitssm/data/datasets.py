@@ -12,6 +12,7 @@ from torchvision.datasets import VisionDataset
 from torchvision.datasets.video_utils import VideoClips
 from torchvision.tv_tensors import Video
 import torchvision.transforms.v2.functional as F
+from torchvision.transforms import Normalize
 from torchvision.transforms.v2 import InterpolationMode
 from glob import glob
 
@@ -38,6 +39,7 @@ class VariableResolutionAEDatasetWrapper:
             self.res_x = res_x
             self.train = train
             self.max_rescale_factor = max_rescale_factor
+            self.normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=False)
 
         def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, torch.Tensor] | torch.Tensor]:
             outputs = self.dataset[index]
@@ -46,13 +48,14 @@ class VariableResolutionAEDatasetWrapper:
             else:
                 rescale_factor = self.max_rescale_factor
   
-            x = F.resize(outputs, self.res_x, interpolation=InterpolationMode.BICUBIC)
+            x = self.normalize(F.resize(outputs, self.res_x, interpolation=InterpolationMode.BILINEAR))
             if outputs.size(-2) == self.res_x * rescale_factor:
                 y = outputs
             else:
-                y = F.resize(outputs, self.res_x * rescale_factor, interpolation=InterpolationMode.BICUBIC)
+                y = F.resize(outputs, self.res_x * rescale_factor, interpolation=InterpolationMode.BILINEAR)
             
             if self.train:
+                y = self.normalize(y)
                 x_cl, _, x_ht, x_wt = x.shape
                 y_cl, _, y_ht, y_wt = y.shape
                 coords = rearrange(

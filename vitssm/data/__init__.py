@@ -95,11 +95,11 @@ def get_dataset(config: DictConfig) -> Any:
             if config.get("load_in_memory", True):
                 return VariableResolutionAEDatasetWrapper(
                     MemoryVideoDataset(
-                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
                         num_frames=config.get("num_frames", 10),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
+                        transform_name="cont_center",
                     ),
                     res_x=config.get("resolution_x", 32),
                     train=config.get("mode", "train") == "train",
@@ -108,11 +108,11 @@ def get_dataset(config: DictConfig) -> Any:
             else:
                 return VariableResolutionAEDatasetWrapper(
                     VideoDataset(
-                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
                         num_frames=config.get("num_frames", 10),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
+                        transform_name="cont_center",
                     ),
                     res_x=config.get("resolution_x", 32),
                     train=config.get("mode", "train") == "train",
