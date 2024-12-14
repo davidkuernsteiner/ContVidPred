@@ -23,6 +23,7 @@ from ..utils.metrics import get_metric_collection
 wandb.login()
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 
 class ModelEngine:
