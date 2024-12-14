@@ -27,7 +27,7 @@ dataset:
 
 optimization:
   loss:
-    name: 'L1Loss'
+    name: 'MSELoss'
     kwargs: {}
   optimizer:
     name: 'AdamW'
@@ -35,8 +35,8 @@ optimization:
              weight_decay: 0.01}
   scheduler:
     name: 'warm_cos_decay_scheduler'
-    kwargs: {warmup_steps: 10000,
-             decay_steps: 90000,
+    kwargs: {warmup_steps: 100,
+             decay_steps: 99900,
              gamma: 0.0}
     step_on_batch: True
   steps: 100000
