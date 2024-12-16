@@ -9,13 +9,13 @@ from einops import rearrange, repeat
 
 from wandb.sdk.wandb_run import Run
 import wandb
+from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 
 from . import ModelEngine
 from ..models import UncondUNetModel, NextFrameUNetModel, NextFrameDiTModel
 from ..models.vae import frange_cycle_linear
-from ..utils.metrics import RolloutMetricCollectionWrapper, AutoEncoderMetricCollectionWrapper, VideoAutoEncoderMetricCollectionWrapper, VariableResVideoAutoEncoderMetricCollectionWrapper
-from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
-#from latte.utils import clip_grad_norm_	
+from ..utils.metrics import *
+
     
     
 class VAEEngine(ModelEngine):
@@ -243,7 +243,7 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
 class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):   
     def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
         super().__init__(model, run_object, resume=resume)
-        self.metrics = VariableResVideoAutoEncoderMetricCollectionWrapper(
+        self.metrics = VariableResolutionVideoAutoEncoderMetricCollectionWrapper(
             self.metrics, 
             run_object.dataset.max_rescale_factor
         ) if self.metrics is not None else None
@@ -339,6 +339,61 @@ class NextFrameUPTEngine(ModelEngine):
             
         if self.metrics is not None:
             self.metrics.update(frames, y)
+        
+        return {}
+    
+    @staticmethod
+    def _log_eval(epoch: int, step: int, eval_outs: dict) -> None:
+        wandb.log(eval_outs, step=step)
+
+
+class ContinuousNextFrameUPTEngine(ModelEngine):   
+    def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
+        super().__init__(model, run_object, resume=resume)
+        self.metrics = VariableResolutionRolloutMetricCollectionWrapper(
+            self.metrics,
+            run_object.dataset.max_rescale_factor,
+        ) if self.metrics is not None else None
+    
+    def _train_step(self, context_frames: Tensor, next_frame: Tensor) -> dict[str, float]:
+        self.optimizer.zero_grad()
+        
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+            x_next_pred, x_next = self.model.forward_train(context_frames, next_frame)
+            loss = self.criterion(x_next_pred, x_next)
+            
+        self.scaler.scale(loss).backward()           
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+        
+        if (self.scheduler is not None) and self.scheduler_step_on_batch:
+            self.scheduler.step()
+        
+        return {"loss": loss.item()}
+    
+    @torch.no_grad()
+    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        _x, _y = _x.to(self.device), _y.to(self.device)
+        b, x_t, c, x_h, x_w = _x.shape
+        b, y_t, c, y_h, y_w = _y.shape
+
+        for rescale_factor in range(1, y_h // x_h + 1):
+            if x_h * rescale_factor == y_h:
+                y = _y.clone()
+            else:
+                y = F.resize(_y.clone(), (x_h * rescale_factor, x_w * rescale_factor), interpolation=F.InterpolationMode.BILINEAR)
+            
+            F.normalize(y, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
+
+            with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
+                frames = self.eval_model.rollout_frames(
+                    _x,
+                    y.shape[1],
+                    spatial_scale=rescale_factor,
+                )
+
+            if self.metrics is not None:
+                self.metrics.update(frames, y, rescale_factor=rescale_factor)
         
         return {}
     

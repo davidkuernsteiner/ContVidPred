@@ -289,6 +289,7 @@ def get_dataloaders_continuous_next_frame(
     config["resolution"] = config["resolution_x"]
     eval_config["num_frames"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
     eval_config["mode"] = "test"
+    eval_config["load_in_memory"] = False
     eval_config["name"] = "vmdsprites-var-res-nextframe"
     
     train_set = get_dataset(config)

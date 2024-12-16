@@ -81,7 +81,7 @@ class VideoAutoEncoderMetricCollectionWrapper:
         self.sample_pred = np.zeros(0)
         
 
-class VariableResVideoAutoEncoderMetricCollectionWrapper:
+class VariableResolutionVideoAutoEncoderMetricCollectionWrapper:
     def __init__(self, metrics: MetricCollection, max_rescale_factor: int) -> None:
         """Calculate metrics over the T dimension of [N, T, ...] tensors."""
         super().__init__()
@@ -137,7 +137,7 @@ class RolloutMetricCollectionWrapper:
         res = DataFrame(res).T.map(lambda x: x.item())
         self.results.append(res)
         
-    def compute(self) -> DataFrame:
+    def compute(self) -> dict:
         assert len(self.results) > 0, "No results to compute."
         res = (sum(self.results) / len(self.results)).to_dict()
         metrics = {}
@@ -156,4 +156,56 @@ class RolloutMetricCollectionWrapper:
         return metrics | sample_frames
     
     def reset(self) -> None:
+        self.metrics.reset()
         self.results = []
+        self.sample_frames = np.zeros(0)
+        self.sample_frames_pred = np.zeros(0)
+
+
+class VariableResolutionRolloutMetricCollectionWrapper:
+    def __init__(self, metrics: MetricCollection, max_rescale_factor: int) -> None:
+        """Calculate metrics over the T dimension of [N, T, ...] tensors."""
+        super().__init__()
+        self.metrics = metrics
+        self.results = [[]] * max_rescale_factor
+        self.samples = [np.zeros(0) for _ in range(max_rescale_factor)]
+        self.samples_pred = [np.zeros(0) for _ in range(max_rescale_factor)]
+        self.max_rescale_factor = max_rescale_factor
+        
+    def update(self, x: Tensor, y: Tensor, rescale_factor: int) -> None:
+        sample_idx = random.randint(0, x.size(0) - 1)
+        self.samples_pred[rescale_factor - 1] = model_output_to_video(x.clone()[sample_idx])
+        self.samples[rescale_factor - 1] = model_output_to_video(y.clone()[sample_idx])
+        x, y = rearrange(x, "n t ... -> t n ..."), rearrange(y, "n t ... -> t n ...")
+        res = {timestep + 1: self.metrics(_x, _y) for timestep, (_x, _y) in enumerate(zip(x, y))}
+        res = DataFrame(res).T.map(lambda x: x.item())
+        self.results[rescale_factor - 1].append(res)
+        
+    def compute(self) -> dict:
+        results = {}
+        for i in range(len(self.results)):
+            assert len(self.results[i]) > 0, "No results to compute."
+            res = (sum(self.results[i]) / len(self.results[i])).to_dict()
+            metrics = {}
+            for metric, values in res.items():
+                data = [(int(step), value) for step, value in values.items()]
+                table = wandb.Table(data=data, columns=["step", metric])
+                metrics[metric] = wandb.plot.line(table, x="step", y=metric, title=f"{metric} over rollout steps")
+
+            sample_frames = {
+                "rollout: ground truth vs. prediction": [
+                    wandb.Video(self.samples[i],fps=4),
+                    wandb.Video(self.samples_pred[i], fps=4),
+                ],
+            }
+
+            results[f"rescale_factor_{i + 1}"] = metrics | sample_frames
+            
+        return results
+    
+    def reset(self) -> None:
+        for i in range(len(self.metrics)):
+            self.metrics.reset()
+            self.samples[i] = np.zeros(0)
+            self.samples_pred[i] = np.zeros(0)
+            self.results = [[]] * self.max_rescale_factor
