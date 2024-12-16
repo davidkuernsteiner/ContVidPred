@@ -20,8 +20,8 @@ from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
     
 class VAEEngine(ModelEngine):
     
-    def __init__(self, model: AutoencoderKL, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
+    def __init__(self, model: AutoencoderKL, run_object: DictConfig, resume: bool = False) -> None:
+        super().__init__(model, run_object, resume=resume)
         if self.config.model.get("use_beta_schedule", True):
             self.betas = frange_cycle_linear(self.steps, start=0.0, stop=self.config.model.get("beta", 1.0), n_cycle=4, ratio=0.5)
         else:
@@ -65,8 +65,8 @@ class VAEEngine(ModelEngine):
     
     
 class NextFrameDiTEngine(ModelEngine):
-    def __init__(self, model: NextFrameDiTModel, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
+    def __init__(self, model: NextFrameDiTModel, run_object: DictConfig, resume: bool = False) -> None:
+        super().__init__(model, run_object, resume=resume)
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, _context_frames: Tensor, _next_frame: Tensor) -> dict[str, float]:
@@ -97,8 +97,8 @@ class NextFrameDiTEngine(ModelEngine):
 
 
 class NextFrameUNetEngine(ModelEngine):
-    def __init__(self, model: NextFrameUNetModel, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
+    def __init__(self, model: NextFrameUNetModel, run_object: DictConfig, resume: bool = False) -> None:
+        super().__init__(model, run_object, resume=resume)
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, _context_frames: Tensor, _next_frame: Tensor) -> dict[str, float]:
@@ -133,8 +133,8 @@ class NextFrameUNetEngine(ModelEngine):
 
 
 class AutoEncoderUPTEngine(ModelEngine):   
-    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
+    def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
+        super().__init__(model, run_object, resume=resume)
         self.metrics = AutoEncoderMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
@@ -186,8 +186,8 @@ class AutoEncoderUPTEngine(ModelEngine):
 
 
 class VideoAutoEncoderUPTEngine(ModelEngine):   
-    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
+    def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
+        super().__init__(model, run_object, resume=resume)
         self.metrics = VideoAutoEncoderMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
@@ -309,8 +309,8 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
     
 
 class NextFrameUPTEngine(ModelEngine):   
-    def __init__(self, model: nn.Module, run_object: DictConfig) -> None:
-        super().__init__(model, run_object)
+    def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
+        super().__init__(model, run_object, resume=resume)
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
     def _train_step(self, context_frames: Tensor, next_frame: Tensor) -> dict[str, float]:

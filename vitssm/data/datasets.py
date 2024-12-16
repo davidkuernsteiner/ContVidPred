@@ -12,8 +12,7 @@ from torchvision.datasets import VisionDataset
 from torchvision.datasets.video_utils import VideoClips
 from torchvision.tv_tensors import Video
 import torchvision.transforms.v2.functional as F
-from torchvision.transforms import Normalize
-from torchvision.transforms.v2 import InterpolationMode
+from torchvision.transforms.v2 import InterpolationMode, Normalize, Resize
 from glob import glob
 
 import numpy as np
@@ -23,6 +22,7 @@ from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
 
 from .read import read_video
 from .utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, read_file, temporal_random_crop
+from . import transforms
 
 
 class VariableResolutionAEDatasetWrapper:  
@@ -106,6 +106,35 @@ class AEDatasetWrapper:
     
         def __len__(self) -> int:
             return len(self.dataset)
+        
+
+class VariableResolutionNextFrameDatasetWrapper:
+    def __init__(
+        self,
+        dataset: torch.utils.data.Dataset,
+        res_x: int,
+        context_length: int = 1,
+    ) -> None:
+        super().__init__()
+
+        self.dataset = dataset
+        self.res_x = res_x
+        self.context_length = context_length
+        
+        self.resize_x = Resize(res_x)
+        self.normalize_x = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=False)
+
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        frames = self.dataset[index]
+        x, y = frames[:self.context_length], frames[self.context_length:]
+        
+        x = self.resize_x(x)
+        x = self.normalize_x(x)
+        
+        return x, y
+
+    def __len__(self) -> int:
+        return len(self.dataset)
         
 
 class NextFrameDatasetWrapper:
@@ -201,11 +230,12 @@ class MemoryVideoDataset(torch.utils.data.Dataset):
         self.frame_interval = frame_interval
         self.image_size = image_size
         self.transforms = get_transforms_video(transform_name, image_size)
+        self.resize = transforms.UCFCenterCropVideo(image_size[0], interpolation_mode="bilinear")
         
         self.data = []
         for path in self.paths["path"]:
             vframes, _ = read_video(path, backend="cv2")
-            self.data.append(vframes)
+            self.data.append(self.resize(vframes))
             
 
     def __getitem__(self, index: int):

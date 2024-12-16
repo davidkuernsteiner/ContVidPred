@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 load_dotenv()
 
-from vitssm.data import get_dataloaders_next_frame
+from vitssm.data import get_dataloaders_next_frame_cont
 from vitssm.models import build_model
 from vitssm.engine.tasks import NextFrameUPTEngine
 
@@ -33,7 +33,7 @@ def main(config: str):
         project=dit_config.project,
         group=dit_config.group,
         name=dit_config.name,
-        id=dit_config.name + "_" + datetime.now().strftime("%Y%m%d_%H%M%S"),
+        id=dit_config.id,
         tags=dit_config.tags,
         config=OmegaConf.to_container(dit_config, resolve=True),
         resume="allow",
@@ -41,12 +41,12 @@ def main(config: str):
         #print(wandb.config)
         run_config = OmegaConf.create(dict(wandb.config))
         model = build_model(run_config.model)
-        engine = NextFrameUPTEngine(model=model, run_object=run_config)
+        engine = NextFrameUPTEngine(model=model, run_object=run_config, resume=dit_config.resume)
 
         #if wandb.run.resumed:
         #    engine._resume_checkpoint()
 
-        train_loader, val_loader = get_dataloaders_next_frame(run_config.dataset)
+        train_loader, val_loader = get_dataloaders_next_frame_cont(run_config.dataset)
 
         engine.train(train_loader, val_loader)
 

@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import HMDB51, UCF101, Kinetics, MovingMNIST, VisionDataset
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, InterpolationMode
 
-from .datasets import AEDatasetWrapper, NextFrameDatasetWrapper, VariableResolutionAEDatasetWrapper, ImageDataset, VideoDataset, MemoryVideoDataset
+from .datasets import *
 from .utils import get_transforms_video
 
 
@@ -145,6 +145,35 @@ def get_dataset(config: DictConfig) -> Any:
                     ),
                     context_length=config.get("context_length", 1),
                 )
+                
+        case "vmdsprites-var-res-nextframe":
+            fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
+            res = config.get("resolution", 64)
+            
+            if config.get("load_in_memory", True):
+                return VariableResolutionNextFrameDatasetWrapper(
+                    MemoryVideoDataset(
+                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        num_frames=config.get("num_frames", 10),
+                        frame_interval=config.get("frame_interval", 1),
+                        image_size=(res, res),
+                        transform_name=config.get("transform_name", "center"),
+                    ),
+                    res_x=config.get("resolution_x", 32),
+                    context_length=config.get("context_length", 1),
+                )
+            else:
+                return VariableResolutionNextFrameDatasetWrapper(
+                    VideoDataset(
+                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        num_frames=config.get("num_frames", 10),
+                        frame_interval=config.get("frame_interval", 1),
+                        image_size=(res, res),
+                        transform_name=config.get("transform_name", "center"),
+                    ),
+                    res_x=config.get("resolution_x", 32),
+                    context_length=config.get("context_length", 1),
+                )
 
         case _:
             raise ValueError(f"Unknown dataset: {config.name}")
@@ -228,6 +257,41 @@ def get_dataloaders_continuous_ae(
     
     eval_config = config.copy()
     eval_config["mode"] = "test"
+    eval_set = get_dataset(eval_config)
+    
+    train_loader = DataLoader(
+        train_set,
+        batch_size=config.batch_size,
+        shuffle=True,
+        num_workers=config.get("num_workers", 1),
+        pin_memory=config.get("pin_memory", False),
+        persistent_workers=config.get("persistent_workers", False),
+    )
+    
+    eval_loader = DataLoader(
+        eval_set,
+        batch_size=config.get("val_batch_size", config.batch_size),
+        shuffle=False,
+        num_workers=config.get("num_workers", 1),
+        pin_memory=config.get("pin_memory", False),
+        persistent_workers=config.get("persistent_workers", False),
+    )
+    
+    return train_loader, eval_loader
+
+
+def get_dataloaders_continuous_next_frame(
+    config: DictConfig,
+) -> tuple[DataLoader, DataLoader]:
+    
+    eval_config = config.copy()
+    
+    config["resolution"] = config["resolution_x"]
+    eval_config["num_frames"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
+    eval_config["mode"] = "test"
+    eval_config["name"] = "vmdsprites-var-res-nextframe"
+    
+    train_set = get_dataset(config)
     eval_set = get_dataset(eval_config)
     
     train_loader = DataLoader(
