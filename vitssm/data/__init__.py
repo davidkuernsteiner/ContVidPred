@@ -126,7 +126,7 @@ def get_dataset(config: DictConfig) -> Any:
             if config.get("load_in_memory", True):
                 return NextFrameDatasetWrapper(
                     MemoryVideoDataset(
-                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
                         num_frames=config.get("num_frames", 10),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
@@ -137,7 +137,7 @@ def get_dataset(config: DictConfig) -> Any:
             else:
                 return NextFrameDatasetWrapper(
                     VideoDataset(
-                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
                         num_frames=config.get("num_frames", 10),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
@@ -153,11 +153,11 @@ def get_dataset(config: DictConfig) -> Any:
             if config.get("load_in_memory", True):
                 return VariableResolutionNextFrameDatasetWrapper(
                     MemoryVideoDataset(
-                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
                         num_frames=config.get("num_frames", 10),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
+                        transform_name="cont_center",
                     ),
                     res_x=config.get("resolution_x", 32),
                     context_length=config.get("context_length", 1),
@@ -165,11 +165,11 @@ def get_dataset(config: DictConfig) -> Any:
             else:
                 return VariableResolutionNextFrameDatasetWrapper(
                     VideoDataset(
-                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
                         num_frames=config.get("num_frames", 10),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
+                        transform_name="cont_center",
                     ),
                     res_x=config.get("resolution_x", 32),
                     context_length=config.get("context_length", 1),

@@ -189,7 +189,7 @@ class VariableResolutionRolloutMetricCollectionWrapper:
             assert len(self.results[i]) > 0, "No results to compute."
             res = (sum(self.results[i]) / len(self.results[i])).to_dict()
             for metric, values in res.items():
-                metrics_y[metric].append(values)
+                metrics_y[metric].append([val for val in values.values()])
 
             sample_frames = {
                 "rollout: ground truth vs. prediction": [
@@ -202,7 +202,7 @@ class VariableResolutionRolloutMetricCollectionWrapper:
         
         for metric, values in metrics_y.items():
             results[metric] = wandb.plot.line_series(
-                xs=list(range(1, len(values) + 1)), 
+                xs=list(range(1, len(values[0]) + 1)), 
                 ys=values,
                 keys=[f"scale: {i + 1}" for i in range(len(values))],
                 title=f"{metric} over rollout steps",
