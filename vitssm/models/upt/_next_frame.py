@@ -93,7 +93,7 @@ class NextFrameUPTModel(nn.Module):
 class NextFrameUPT3DModelConfig(BaseModel):
     upt_autoencoder_type: Literal["UPTVAE_M", "UPTVAE_T"] = "UPTVAE_M"
     upt_autoencoder_kwargs: dict = {}
-    upt_autoencoder_checkpoint_path: str
+    upt_autoencoder_checkpoint_path: str | None
     upt_approximator_type: Literal["UPTA_M", "UPTA_T"] = "UPTA_M"
     upt_approximator_kwargs: dict = {}
     device: Literal["cpu", "cuda"] = "cuda"

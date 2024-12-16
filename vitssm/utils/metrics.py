@@ -144,7 +144,7 @@ class RolloutMetricCollectionWrapper:
         for metric, values in res.items():
             data = [(int(step), value) for step, value in values.items()]
             table = wandb.Table(data=data, columns=["step", metric])
-            metrics[metric] = wandb.plot.line(table, x="step", y=metric, title=f"{metric} over rollout steps")
+            metrics[metric] = table #wandb.plot.line(table, x="step", y=metric, title=f"{metric} over rollout steps")
         
         sample_frames = {
             "rollout: ground truth vs. prediction": [
