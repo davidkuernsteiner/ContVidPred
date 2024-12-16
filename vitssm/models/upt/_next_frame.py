@@ -175,7 +175,9 @@ class NextFrameUPT3DModel(nn.Module):
         dims = torch.tensor([int(cl * temporal_scale), int(ht * spatial_scale), int(wt * spatial_scale)]).to(self.device)
         output_pos = output_pos / (dims - 1) * 1000
         
-        x = self.autoencoder.decode(x, output_pos=repeat(output_pos, "... -> b ...", b=bs*nf))
+        x = torch.split(x, bs, dim=0)
+        x = [self.autoencoder.decode(_x, output_pos=repeat(output_pos, "... -> b ...", b=bs)) for _x in x]
+        x = torch.cat(x, dim=0)
         x = rearrange(x, "(bs nf) cl ch ht wt -> bs (nf cl) ch ht wt", bs=bs, nf=nf)
         
         return x

@@ -73,7 +73,7 @@ class ModelEngine:
         else:
             self.eval_model = self.model
 
-        self.state = {"step": 0, "epoch": 0}
+        self.state = {"step": 1, "epoch": 1}
         
         if resume:
             self._resume_checkpoint()
