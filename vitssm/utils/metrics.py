@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Sequence, Union
 import numpy as np
 from torch import Tensor
@@ -144,7 +145,7 @@ class RolloutMetricCollectionWrapper:
         for metric, values in res.items():
             data = [(int(step), value) for step, value in values.items()]
             table = wandb.Table(data=data, columns=["step", metric])
-            metrics[metric] = table #wandb.plot.line(table, x="step", y=metric, title=f"{metric} over rollout steps")
+            metrics[metric] = wandb.plot.line(table, x="step", y=metric, title=f"{metric} over rollout steps")
         
         sample_frames = {
             "rollout: ground truth vs. prediction": [
@@ -183,14 +184,12 @@ class VariableResolutionRolloutMetricCollectionWrapper:
         
     def compute(self) -> dict:
         results = {}
+        metrics_y = defaultdict(list)
         for i in range(len(self.results)):
             assert len(self.results[i]) > 0, "No results to compute."
             res = (sum(self.results[i]) / len(self.results[i])).to_dict()
-            metrics = {}
             for metric, values in res.items():
-                data = [(int(step), value) for step, value in values.items()]
-                table = wandb.Table(data=data, columns=["step", metric])
-                metrics[metric] = wandb.plot.line(table, x="step", y=metric, title=f"{metric} over rollout steps")
+                metrics_y[metric].append(values)
 
             sample_frames = {
                 "rollout: ground truth vs. prediction": [
@@ -199,7 +198,16 @@ class VariableResolutionRolloutMetricCollectionWrapper:
                 ],
             }
 
-            results[f"rescale_factor_{i + 1}"] = metrics | sample_frames
+            results[f"rescale_factor_{i + 1}"] = sample_frames
+        
+        for metric, values in metrics_y.items():
+            results[metric] = wandb.plot.line_series(
+                xs=list(range(1, len(values) + 1)), 
+                ys=values,
+                keys=[f"scale: {i + 1}" for i in range(len(values))],
+                title=f"{metric} over rollout steps",
+                xname="rollout step",
+            )
             
         return results
     
