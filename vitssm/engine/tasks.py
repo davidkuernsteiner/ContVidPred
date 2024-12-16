@@ -357,6 +357,8 @@ class ContinuousNextFrameUPTEngine(ModelEngine):
     
     def _train_step(self, context_frames: Tensor, next_frame: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
+
+        context_frames, next_frame = context_frames.to(self.device), next_frame.to(self.device)
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             x_next_pred, x_next = self.model.forward_train(context_frames, next_frame)
