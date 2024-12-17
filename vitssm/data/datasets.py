@@ -1,160 +1,25 @@
 import os
 import zipfile
-import random
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
 import gdown
 import torch
-from einops import rearrange
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.video_utils import VideoClips
-from torchvision.tv_tensors import Video
-import torchvision.transforms.v2.functional as F
-from torchvision.transforms.v2 import InterpolationMode, Normalize, Resize
-from glob import glob
 
 import numpy as np
-from PIL import ImageFile
-from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
+import cv2
+from PIL import Image
+from torchvision.datasets.folder import pil_loader
 
 
 from .read import read_video
-from .utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, read_file, temporal_random_crop
+from .utils import get_transforms_image, get_transforms_video, read_file, temporal_random_crop
 from . import transforms
 
 
-class VariableResolutionAEDatasetWrapper:  
-        def __init__(
-            self,
-            dataset: torch.utils.data.Dataset,
-            res_x: int,
-            train: bool,
-            max_rescale_factor: int,
-        ) -> None:
-            super().__init__()
-
-            self.dataset = dataset
-            self.res_x = res_x
-            self.train = train
-            self.max_rescale_factor = max_rescale_factor
-            self.normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=False)
-
-        def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, torch.Tensor] | torch.Tensor]:
-            outputs = self.dataset[index]
-            if self.train:
-                rescale_factor = random.choice(list(range(1, self.max_rescale_factor + 1)))
-            else:
-                rescale_factor = self.max_rescale_factor
-  
-            x = self.normalize(F.resize(outputs, self.res_x, interpolation=InterpolationMode.BILINEAR))
-            if outputs.size(-2) == self.res_x * rescale_factor:
-                y = outputs
-            else:
-                y = F.resize(outputs, self.res_x * rescale_factor, interpolation=InterpolationMode.BILINEAR)
-            
-            if self.train:
-                y = self.normalize(y)
-                x_cl, _, x_ht, x_wt = x.shape
-                y_cl, _, y_ht, y_wt = y.shape
-                coords = rearrange(
-                    torch.stack(
-                        torch.meshgrid(
-                            [
-                                torch.arange(int(y_cl)),
-                                torch.arange(int(y_ht)),
-                                torch.arange(int(y_wt))
-                            ], 
-                            indexing="ij",
-                        )
-                    ),
-                    "ndim time height width -> (time height width) ndim",
-                ).float()
-                dims = torch.tensor([int(y_cl), int(y_ht), int(y_wt)])
-                coords = coords / (dims - 1) * 1000
-
-                y_values = rearrange(y, "cl ch ht wt -> (cl ht wt) ch")
-
-                subsample_idcs = torch.randperm(coords.size(0))[:x_cl*x_ht*x_wt]
-                coords = coords[subsample_idcs]
-                y_values = y_values[subsample_idcs]
-
-                return x, {"coords": coords, "values": y_values}
-            
-            else:
-                return x, y
-
-        def __len__(self) -> int:
-            return len(self.dataset)
-        
-
-class AEDatasetWrapper:  
-        def __init__(
-            self,
-            dataset: torch.utils.data.Dataset,
-            return_y: bool = False,
-        ) -> None:
-            super().__init__()
-    
-            self.dataset = dataset
-            self.return_y = return_y
-    
-        def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-            outputs = self.dataset[index]
-            return outputs, outputs if self.return_y else outputs
-    
-        def __len__(self) -> int:
-            return len(self.dataset)
-        
-
-class VariableResolutionNextFrameDatasetWrapper:
-    def __init__(
-        self,
-        dataset: torch.utils.data.Dataset,
-        res_x: int,
-        context_length: int = 1,
-    ) -> None:
-        super().__init__()
-
-        self.dataset = dataset
-        self.res_x = res_x
-        self.context_length = context_length
-        
-        self.resize_x = Resize(res_x)
-        self.normalize_x = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=False)
-
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        frames = self.dataset[index]
-        x, y = frames[:self.context_length], frames[self.context_length:]
-        
-        x = self.resize_x(x)
-        x = self.normalize_x(x)
-        
-        return x, y
-
-    def __len__(self) -> int:
-        return len(self.dataset)
-        
-
-class NextFrameDatasetWrapper:
-    def __init__(
-        self,
-        dataset: torch.utils.data.Dataset,
-        context_length: int = 1,
-    ) -> None:
-        super().__init__()
-
-        self.dataset = dataset
-        self.context_length = context_length
-
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        frames = self.dataset[index]
-        return frames[:self.context_length], frames[self.context_length:]
-
-    def __len__(self) -> int:
-        return len(self.dataset)
-        
 
 #ADAPTED FROM: https://github.com/hpcaitech/Open-Sora/blob/main/opensora/datasets/datasets.py
 class VideoDataset(torch.utils.data.Dataset):
@@ -251,6 +116,59 @@ class MemoryVideoDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.data)
+    
+
+class RandomFrameVideoDataset(torch.utils.data.Dataset):
+    def __init__(
+            self,
+            data_path: str | None = None,
+            image_size: tuple[int, int] = (32, 32),
+            transform_name="center",
+        ):
+        """
+        Args:
+            video_dir (string): Directory with all the video files.
+            transform (callable, optional): Optional transform to be applied on a sample.
+        """
+        self.data_path = data_path
+        self.paths = read_file(data_path)
+        self.image_size = image_size
+        self.transforms = get_transforms_image(transform_name, image_size)
+        self.frame_indices = self._get_all_frame_indices()
+
+    def _get_all_frame_indices(self):
+        frame_indices = []
+        for video_path in self.paths["path"]:
+            cap = cv2.VideoCapture(video_path)
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            frame_indices.extend([(video_path, i) for i in range(frame_count)])
+            cap.release()
+        return frame_indices
+
+    def __len__(self):
+        return len(self.frame_indices)
+
+    def __getitem__(self, idx):
+        video_path, frame_idx = self.frame_indices[idx]
+        frame = self._get_frame(video_path, frame_idx)
+        
+        if self.transforms:
+            frame = self.transforms(frame)
+        
+        return frame
+
+    def _get_frame(self, video_path, frame_idx):
+        cap = cv2.VideoCapture(video_path)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+        ret, frame = cap.read()
+        cap.release()
+        
+        if not ret:
+            raise ValueError(f"Frame {frame_idx} is not available in video {video_path}")
+            
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = Image.fromarray(frame)
+        return frame
     
     
 #ADAPTED FROM: https://github.com/hpcaitech/Open-Sora/blob/main/opensora/datasets/datasets.py

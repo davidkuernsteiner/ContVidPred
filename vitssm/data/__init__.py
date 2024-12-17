@@ -9,6 +9,7 @@ from torchvision.datasets import HMDB51, UCF101, Kinetics, MovingMNIST, VisionDa
 from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, InterpolationMode
 
 from .datasets import *
+from .wrappers import *
 from .utils import get_transforms_video
 
 
