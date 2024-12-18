@@ -7,6 +7,7 @@ from .vae import VideoVAEConfig
 from .dit import *
 from .unet import *
 from .upt import *
+from .srno import *
 
 
 def build_model(config: DictConfig) -> Module:
@@ -60,6 +61,11 @@ def build_model(config: DictConfig) -> Module:
         case "upt_3d_next_frame":
             model_config = NextFrameUPT3DModelConfig(**config)
             model = NextFrameUPT3DModel(**model_config.model_dump())
+            return model
+        
+        case "srno":
+            model_config = SRNOModelConfig(**config)
+            model = SRNO(**model_config.model_dump())
             return model
         
         case _:

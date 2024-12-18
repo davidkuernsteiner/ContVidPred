@@ -19,7 +19,7 @@ def get_transform(
     """Builds image transformations."""
     transform = Compose(
         [
-            Resize(config.resolution, interpolation=InterpolationMode.BICUBIC),
+            Resize(config.resolution, interpolation=InterpolationMode.BILINEAR),
             ToDtype(torch.float32, scale=True),
             Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
         ],
@@ -175,6 +175,22 @@ def get_dataset(config: DictConfig) -> Any:
                     res_x=config.get("resolution_x", 32),
                     context_length=config.get("context_length", 1),
                 )
+                
+        case "vmdsprites-srno":
+            fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
+            res = config.get("resolution", 64)
+            
+            return SRImplicitDownsampledFast(
+                RandomFrameVideoDataset(
+                    data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
+                    image_size=(res, res),
+                    transform_name="center",
+                ),
+                inp_size=config.get("resolution_x", 32),
+                scale_min=1,
+                scale_max=config.get("max_rescale_factor", 4),
+                augment=config.get("mode", "train") == "train",
+            )
 
         case _:
             raise ValueError(f"Unknown dataset: {config.name}")

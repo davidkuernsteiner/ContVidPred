@@ -1,4 +1,6 @@
-#TAKEN FROM: https://github.com/2y7c3/Super-Resolution-Neural-Operator/blob/main/models/sronet.py
+#MODIFIED FROM: https://github.com/2y7c3/Super-Resolution-Neural-Operator/blob/main/models/sronet.py
+from typing import Literal
+from pydantic import BaseModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,18 +8,27 @@ import torch.nn.functional as F
 import math
 import numpy as np
 
-import models
-from models.galerkin import simple_attn
+from ._edsr import edsr_models
+from ._galerkin import simple_attn
 from ._utils import make_coord
 
 
 
-class SRNO(nn.Module):
+class SRNOModelConfig(BaseModel):
+    encoder_spec: Literal["edsr_baseline"] = "edsr_baseline"
+    width: int = 256
+    blocks: int = 16
 
-    def __init__(self, encoder_spec, width=256, blocks=16):
+class SRNO(nn.Module):
+    def __init__(
+    self,
+    encoder_spec: Literal["edsr_baseline"] = "edsr_baseline",
+    width=256,
+    blocks=16
+):
         super().__init__()
         self.width = width
-        self.encoder = models.make(encoder_spec)
+        self.encoder = edsr_models[encoder_spec]()
         self.conv00 = nn.Conv2d((64 + 2)*4+2, self.width, 1)
 
         self.conv0 = simple_attn(self.width, blocks)

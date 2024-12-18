@@ -190,6 +190,11 @@ def EDSR_baseline(
         scale=scale, no_upsampling=no_upsampling, rgb_range=rgb_range
 )
 
+
+edsr_models = {
+    "edsr_baseline": EDSR_baseline,
+}
+
 #def make_edsr_baseline(n_resblocks=16, n_feats=64, res_scale=1,
 #                       scale=2, no_upsampling=False, rgb_range=1):
 #    args = Namespace()
