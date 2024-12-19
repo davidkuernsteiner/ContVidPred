@@ -111,6 +111,8 @@ class EDSR(nn.Module):
         conv=default_conv,
     ):
         super().__init__()
+        
+        self.no_upsampling = no_upsampling
 
         kernel_size = 3
         act = nn.ReLU(True)
@@ -154,7 +156,7 @@ class EDSR(nn.Module):
         res = self.body(x)
         res += x
 
-        if self.args.no_upsampling:
+        if self.no_upsampling:
             x = res
         else:
             x = self.tail(res)
@@ -183,7 +185,7 @@ class EDSR(nn.Module):
 
 def EDSR_baseline(
     n_resblocks=16, n_feats=64, res_scale=1,
-    scale=2, no_upsampling=False, rgb_range=1
+    scale=2, no_upsampling=True, rgb_range=1
 ):
     return EDSR(
         n_resblocks=n_resblocks, n_feats=n_feats, res_scale=res_scale,

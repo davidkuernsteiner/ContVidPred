@@ -1,11 +1,11 @@
 project: 'ContVidPred'
-group: 'UPT'
-name: 'vmdsprites-0-UPT_VAE_T-cont'
-id: 'vmdsprites-0-UPT_VAE_T-cont_20241214_150239'
-resume: True
-tags: ['upt', 'vmdsprites', 'tiny']
+group: 'SRNO'
+name: 'vmdsprites-0-SRNO-EDSR'
+id: 'vmdsprites-0-SRNO-EDSR_20241220'
+resume: False
+tags: ['srno', 'vmdsprites', 'baseline']
 log_freq: 50
-eval_freq: 100
+eval_freq: 1
 checkpoint_freq: 9999999999999
 seed: 0
 
@@ -15,8 +15,6 @@ dataset:
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
-  num_frames: 4
-  frame_interval: 1
   resolution: 128
   resolution_x: 32
   min_rescale_factor: 1
@@ -26,11 +24,11 @@ dataset:
   persistent_workers: True
   pin_memory: True
   batch_size: 64
-  val_batch_size: 16
+  val_batch_size: 64
 
 optimization:
   loss:
-    name: 'MSELoss'
+    name: 'L1Loss'
     kwargs: {}
   optimizer:
     name: 'AdamW'
@@ -38,8 +36,8 @@ optimization:
              weight_decay: 0.01}
   scheduler:
     name: 'warm_cos_decay_scheduler'
-    kwargs: {warmup_steps: 100,
-             decay_steps: 99900,
+    kwargs: {warmup_steps: 1,
+             decay_steps: 99999,
              gamma: 0.0}
     step_on_batch: True
   steps: 100000
@@ -53,18 +51,11 @@ metrics:
     kwargs: {}
 
 model:
-  name: 'upt_vae'
+  name: 'srno'
   device: 'cuda'
   use_amp: False
   use_ema: False
   ema_steps: 1
 
-  input_dim: 3
-  patch_size: [2, 2, 2]
-  resolution: [4, 32, 32]
-  latent_dim: 96
-  num_heads: 4
-  depth: 8
-  perc_dim: 96
-  perc_num_heads: 4
-  num_latent_tokens: 32
+  width: 256
+  blocks: 16

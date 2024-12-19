@@ -407,7 +407,7 @@ class ContinuousNextFrameUPTEngine(ModelEngine):
 class SRNOEngine(ModelEngine):
     def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
         super().__init__(model, run_object, resume=resume)
-        self.metrics = VariableResolutionRolloutMetricCollectionWrapper(
+        self.metrics = VariableResolutionVideoAutoEncoderMetricCollectionWrapper(
             self.metrics,
             run_object.dataset.max_rescale_factor,
         ) if self.metrics is not None else None
@@ -416,9 +416,11 @@ class SRNOEngine(ModelEngine):
         self.optimizer.zero_grad()
 
         for k, v in batch.items():
-            batch[k] = v.to(self.device)
+            batch[k] = v.to(self.device, non_blocking=True)
         
         inp, coord, cell, gt = batch.values()
+        F.normalize(inp, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
+        F.normalize(gt, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             pred = self.model(inp, coord, cell)
@@ -435,29 +437,21 @@ class SRNOEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, *batches: dict[str, Tensor]) -> dict[str, float]:
-        for scale_factor, batch in enumerate(batches):
+        for rescale_factor, batch in enumerate(batches, start=1):
             for k, v in batch.items():
-                batch[k] = v.to(self.device)
+                batch[k] = v.to(self.device, non_blocking=True)
 
             inp, coord, cell, gt = batch.values()
-
-        for rescale_factor in range(1, y_h // x_h + 1):
-            if x_h * rescale_factor == y_h:
-                y = _y.clone()
-            else:
-                y = F.resize(_y.clone(), (x_h * rescale_factor, x_w * rescale_factor), interpolation=F.InterpolationMode.BILINEAR)
-            
-            F.normalize(y, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
+            F.normalize(inp, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
+            F.normalize(gt, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
 
             with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-                frames = self.eval_model.rollout_frames(
-                    _x,
-                    y.shape[1],
-                    spatial_scale=rescale_factor,
-                )
+                pred = self.eval_model(inp, coord, cell)
+            
+            pred.clamp_(-1, 1)
 
             if self.metrics is not None:
-                self.metrics.update(frames, y, rescale_factor=rescale_factor)
+                self.metrics.update(pred, gt, rescale_factor=rescale_factor)
         
         return {}
     
