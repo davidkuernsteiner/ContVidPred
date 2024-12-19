@@ -18,11 +18,6 @@ def build_model(config: DictConfig) -> Module:
             model = AutoencoderKL(**model_config.model_dump())
             return model
         
-        #case "latte":
-        #    model_config = LatteDiffusionModelConfig(**config)
-        #    model = LatteDiffusionModel(**model_config.model_dump())
-        #    return model
-        
         case "dit":
             model_config = NextFrameDiTModelConfig(**config)
             model = NextFrameDiTModel(**model_config.model_dump())

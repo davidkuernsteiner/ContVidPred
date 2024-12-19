@@ -187,7 +187,7 @@ def get_dataset(config: DictConfig) -> Any:
                     transform_name="center",
                 ),
                 inp_size=config.get("resolution_x", 32),
-                scale_min=1,
+                scale_min=config.get("min_rescale_factor", 1),
                 scale_max=config.get("max_rescale_factor", 4),
                 augment=config.get("mode", "train") == "train",
             )
@@ -332,3 +332,38 @@ def get_dataloaders_continuous_next_frame(
     
     return train_loader, eval_loader
     
+    
+def get_dataloaders_srno(
+    config: DictConfig,
+) -> tuple[DataLoader, tuple[DataLoader]]:
+    train_set = get_dataset(config)
+    
+    train_loader = DataLoader(
+        train_set,
+        batch_size=config.batch_size,
+        shuffle=True,
+        num_workers=config.get("num_workers", 1),
+        pin_memory=config.get("pin_memory", False),
+        persistent_workers=config.get("persistent_workers", False),
+    )
+    
+    eval_config = config.copy()
+    eval_config["mode"] = "test"
+    
+    eval_loaders = []
+    for i in range(1, 5):
+        eval_config["min_rescale_factor"] = i
+        eval_config["max_rescale_factor"] = i
+        eval_set = get_dataset(eval_config)
+        
+        eval_loader = DataLoader(
+            eval_set,
+            batch_size=config.get("val_batch_size", config.batch_size),
+            shuffle=False,
+            num_workers=config.get("num_workers", 1),
+            pin_memory=config.get("pin_memory", False),
+            persistent_workers=config.get("persistent_workers", False),
+        )
+        eval_loaders.append(eval_loader)
+    
+    return train_loader, tuple(eval_loaders)

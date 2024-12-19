@@ -1,1 +1,1 @@
-from _sronet import SRNO, SRNOModelConfig
+from ._sronet import SRNO, SRNOModelConfig

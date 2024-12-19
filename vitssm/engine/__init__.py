@@ -80,10 +80,10 @@ class ModelEngine:
         
         wandb.log({"Model Parameters": count_parameters(self.model)})
         
-    def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+    def _train_step(self, *args) -> dict[str, float]:
         raise NotImplementedError
 
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+    def _eval_step(self, *args) -> dict[str, float]:
         raise NotImplementedError
 
     def train(self, train_dataloader: DataLoader, eval_dataloader: DataLoader) -> None:
@@ -100,7 +100,7 @@ class ModelEngine:
             self.model.to(self.device)
             self.model.train()
             
-            for args in tqdm(train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state['epoch']}"):
+            for args in tqdm(zip(*train_dataloader) if isinstance(train_dataloader, tuple) else train_dataloader, total=len(train_dataloader), desc=f"Epoch {self.state['epoch']}"):
                 train_outs = self._train_step(*args if isinstance(args, (list, tuple)) else (args,))
                 self.state["step"] += 1
                 
@@ -130,7 +130,7 @@ class ModelEngine:
                 self.eval_model.eval()
 
                 eval_metrics = defaultdict(list)
-                for args in tqdm(eval_dataloader, total=len(eval_dataloader), desc=f"EVALUATION Epoch {self.state['epoch']}"):
+                for args in tqdm(zip(*eval_dataloader) if isinstance(eval_dataloader, tuple) else eval_dataloader, total=len(eval_dataloader), desc=f"EVALUATION Epoch {self.state['epoch']}"):
                     eval_outs = self._eval_step(*args if isinstance(args, (list, tuple)) else (args,))
                     for k, v in eval_outs.items():
                         eval_metrics[k].append(v)

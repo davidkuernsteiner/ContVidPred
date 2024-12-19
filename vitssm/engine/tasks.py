@@ -434,8 +434,12 @@ class SRNOEngine(ModelEngine):
         return {"loss": loss.item()}
     
     @torch.no_grad()
-    def _eval_step(self, x: Tensor, y: Tensor) -> dict[str, float]:
-        x, y = x.to(self.device), y.to(self.device)
+    def _eval_step(self, *batches: dict[str, Tensor]) -> dict[str, float]:
+        for scale_factor, batch in enumerate(batches):
+            for k, v in batch.items():
+                batch[k] = v.to(self.device)
+
+            inp, coord, cell, gt = batch.values()
 
         for rescale_factor in range(1, y_h // x_h + 1):
             if x_h * rescale_factor == y_h:
