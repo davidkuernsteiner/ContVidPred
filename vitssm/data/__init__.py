@@ -67,119 +67,68 @@ def get_dataset(config: DictConfig) -> Any:
             fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
             res = config.get("resolution", 64)
             
-            if config.get("load_in_memory", True):
-                return AEDatasetWrapper(
-                    MemoryVideoDataset(
-                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        num_frames=config.get("num_frames", 10),
-                        frame_interval=config.get("frame_interval", 1),
-                        image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
-                    ),
-                    return_y=True,
-                )
-            else:
-                return AEDatasetWrapper(
-                    VideoDataset(
-                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        video_length=config.get("video_length", 50),
-                        clip_length=config.get("clip_length", 8),
-                        frame_interval=config.get("frame_interval", 1),
-                        image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
-                    ),
-                    return_y=True,
-                )
+            return AEDatasetWrapper(
+                VideoDataset(
+                    data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
+                    video_length=config.get("video_length", 50),
+                    clip_length=config.get("clip_length", 8),
+                    frame_interval=config.get("frame_interval", 1),
+                    image_size=(res, res),
+                    transform_name=config.get("transform_name", "center"),
+                ),
+                return_y=True,
+            )
                 
         case "vmdsprites-var-res-ae":
             fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
             res = config.get("resolution", 128)
             
-            if config.get("load_in_memory", True):
-                return VariableResolutionAEDatasetWrapper(
-                    MemoryVideoDataset(
-                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        num_frames=config.get("num_frames", 10),
-                        frame_interval=config.get("frame_interval", 1),
-                        image_size=(res, res),
-                        transform_name="cont_center",
-                    ),
-                    res_x=config.get("resolution_x", 32),
-                    train=config.get("mode", "train") == "train",
-                    max_rescale_factor=config.get("max_rescale_factor", 4),
-                )
-            else:
-                return VariableResolutionAEDatasetWrapper(
-                    VideoDataset(
-                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        video_length=config.get("video_length", 50),
-                        clip_length=config.get("clip_length", 8),
-                        frame_interval=config.get("frame_interval", 1),
-                        image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
-                    ),
-                    res_x=config.get("resolution_x", 32),
-                    train=config.get("mode", "train") == "train",
-                    max_rescale_factor=config.get("max_rescale_factor", 4),
-                )
+            return VariableResolutionAEDatasetWrapper(
+                VideoDataset(
+                    data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
+                    video_length=config.get("video_length", 50),
+                    clip_length=config.get("clip_length", 8),
+                    frame_interval=config.get("frame_interval", 1),
+                    image_size=(res, res),
+                    transform_name=config.get("transform_name", "cont_center"),
+                ),
+                res_x=config.get("resolution_x", 32),
+                train=config.get("mode", "train") == "train",
+                max_rescale_factor=config.get("max_rescale_factor", 4),
+            )
 
         case "vmdsprites-nextframe":
             fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
             res = config.get("resolution", 64)
             
-            if config.get("load_in_memory", True):
-                return NextFrameDatasetWrapper(
-                    MemoryVideoDataset(
-                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        num_frames=config.get("num_frames", 10),
-                        frame_interval=config.get("frame_interval", 1),
-                        image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
-                    ),
-                    context_length=config.get("context_length", 1),
-                )
-            else:
-                return NextFrameDatasetWrapper(
-                    VideoDataset(
-                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        video_length=config.get("video_length", 50),
-                        clip_length=config.get("clip_length", 8),
-                        frame_interval=config.get("frame_interval", 1),
-                        image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
-                    ),
-                    context_length=config.get("context_length", 1),
-                )
+            return NextFrameDatasetWrapper(
+                VideoDataset(
+                    data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
+                    video_length=config.get("video_length", 50),
+                    clip_length=config.get("clip_length", 8),
+                    frame_interval=config.get("frame_interval", 1),
+                    image_size=(res, res),
+                    transform_name=config.get("transform_name", "center"),
+                ),
+                context_length=config.get("context_length", 1),
+            )
                 
         case "vmdsprites-var-res-nextframe":
             fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
             res = config.get("resolution", 64)
             
-            if config.get("load_in_memory", True):
-                return VariableResolutionNextFrameDatasetWrapper(
-                    MemoryVideoDataset(
-                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        num_frames=config.get("num_frames", 10),
-                        frame_interval=config.get("frame_interval", 1),
-                        image_size=(res, res),
-                        transform_name="cont_center",
-                    ),
-                    res_x=config.get("resolution_x", 32),
-                    context_length=config.get("context_length", 1),
-                )
-            else:
-                return VariableResolutionNextFrameDatasetWrapper(
-                    VideoDataset(
-                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        video_length=config.get("video_length", 50),
-                        clip_length=config.get("clip_length", 8),
-                        frame_interval=config.get("frame_interval", 1),
-                        image_size=(res, res),
-                        transform_name=config.get("transform_name", "center"),
-                    ),
-                    res_x=config.get("resolution_x", 32),
-                    context_length=config.get("context_length", 1),
-                )
+            return VariableResolutionNextFrameDatasetWrapper(
+                VideoDataset(
+                    data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
+                    video_length=config.get("video_length", 50),
+                    clip_length=config.get("clip_length", 8),
+                    frame_interval=config.get("frame_interval", 1),
+                    image_size=(res, res),
+                    transform_name=config.get("transform_name", "cont_center"),
+                ),
+                res_x=config.get("resolution_x", 32),
+                context_length=config.get("context_length", 1),
+            )
                 
         case "vmdsprites-srno":
             fold = f"train_{config.get('fold', 0)}.csv" if config.get("mode", "train") == "train" else f"test_{config.get('fold', 0)}.csv"
