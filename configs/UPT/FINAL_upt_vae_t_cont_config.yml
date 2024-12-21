@@ -1,7 +1,7 @@
 project: 'ContVidPred'
 group: 'UPT'
 name: 'vmdsprites-0-UPT_VAE_T-cont'
-id: 'vmdsprites-0-UPT_VAE_T-cont_20241221_1'
+id: 'vmdsprites-0-UPT_VAE_T-cont_20241221_2'
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 50
 eval_freq: 1

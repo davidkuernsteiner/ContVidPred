@@ -25,22 +25,22 @@ wandb.require("core")
 def main(config: str):   
     config_path = Path(os.environ["CONFIG_DIR"]) / config
     
-    dit_config = OmegaConf.load(config_path)
+    dict_config = OmegaConf.load(config_path)
     
     with wandb.init(
         job_type="train",
         entity=os.environ["WANDB_ENTITY"],
-        project=dit_config.project,
-        group=dit_config.group,
-        name=dit_config.name,
-        id=dit_config.id,
-        tags=dit_config.tags,
-        config=OmegaConf.to_container(dit_config, resolve=True),
+        project=dict_config.project,
+        group=dict_config.group,
+        name=dict_config.name,
+        id=dict_config.id,
+        tags=dict_config.tags,
+        config=OmegaConf.to_container(dict_config, resolve=True),
         resume="allow",
     ):      
         run_config = OmegaConf.create(dict(wandb.config))
         model = build_model(run_config.model)
-        engine = ContinuousVideoAutoEncoderUPTEngine(model=model, run_object=run_config, resume=dit_config.resume)
+        engine = ContinuousVideoAutoEncoderUPTEngine(model=model, run_object=run_config, resume=dict_config.resume)
 
         train_loader, val_loader = get_dataloaders_continuous_ae(run_config.dataset)
 
