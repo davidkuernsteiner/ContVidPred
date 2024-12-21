@@ -1,7 +1,7 @@
 project: 'ContVidPred'
 group: 'UPT'
 name: 'vmdsprites-0-UPT_3D_T-cont'
-id: 'vmdsprites-0-UPT_3D_T-cont_20241221_3'
+id: 'vmdsprites-0-UPT_3D_T-cont_20241221_4'
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 50
 eval_freq: 1
@@ -11,7 +11,6 @@ resume: False
 
 dataset:
   name: 'vmdsprites-nextframe'
-  load_in_memory: True
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
@@ -24,12 +23,11 @@ dataset:
   resolution_x: 32
   max_rescale_factor: 4
   train_percentage: 1.0
-  num_workers: 8
-  persistent_workers: True
-  pin_memory: True
+  num_workers: 2
+  persistent_workers: False
+  pin_memory: False
   batch_size: 64
-  val_batch_size: 16
-  partition_size: 1000
+  val_batch_size: 8
 
 optimization:
   loss:

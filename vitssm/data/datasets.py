@@ -131,7 +131,7 @@ class RandomFrameVideoDataset(torch.utils.data.Dataset):
             self,
             data_path: str | None = None,
             image_size: tuple[int, int] = (32, 32),
-            transform_name="center",
+            transform_name="resize",
         ):
         """
         Args:

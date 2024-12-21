@@ -214,7 +214,7 @@ def _read_from_stream(
 
 
 #TAKEN FROM: https://github.com/hpcaitech/Open-Sora.git
-@lru_cache(maxsize=1000)
+@lru_cache(maxsize=100)
 def read_video_cv2(video_path):
     cap = cv2.VideoCapture(video_path)
 

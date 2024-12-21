@@ -127,6 +127,14 @@ def get_transforms_image(name="center", image_size=(256, 256)):
                 transforms_pt.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
             ]
         )
+    elif name == "resize":
+        transform = transforms_pt.Compose(
+            [
+                transforms_pt.Resize(image_size),
+                transforms_pt.ToTensor(),
+                transforms_pt.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
+            ]
+        )
     else:
         raise NotImplementedError(f"Transform {name} not implemented")
     return transform

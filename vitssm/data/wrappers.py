@@ -151,13 +151,13 @@ class NextFrameDatasetWrapper:
 #TAKEN FROM: https://github.com/2y7c3/Super-Resolution-Neural-Operator/blob/main/datasets/wrappers.py
 def resize_fn(img, size):
     return transforms.ToTensor()(
-        transforms.Resize(size, InterpolationMode.BICUBIC)(
+        transforms.Resize(size, InterpolationMode.BILINEAR)(
             transforms.ToPILImage()(img)))
 
 #TAKEN FROM: https://github.com/2y7c3/Super-Resolution-Neural-Operator/blob/main/datasets/wrappers.py
 class SRImplicitDownsampledFast(Dataset):
 
-    def __init__(self, dataset, inp_size=None, scale_min=1, scale_max=None,
+    def __init__(self, dataset, inp_size=32, scale_min=1, scale_max=None,
                  augment=False):
         self.dataset = dataset
         self.inp_size = inp_size

@@ -5,30 +5,35 @@ import numpy as np
 
 
 class PartitionBatchSampler(Sampler):
-    def __init__(self, dataset, batch_size, partition_size, shuffle=True):
+    def __init__(self, dataset, batch_size, num_partitions, shuffle=True):
         """
         Args:
             dataset (Dataset): The dataset to sample from.
             batch_size (int): The size of the batches to generate.
-            partition_size (int): Size of each partition (number of samples per partition).
+            num_partitions (int): Number of partitions to divide the dataset into.
             shuffle (bool): Whether to shuffle samples within each partition.
         """
         self.dataset = dataset
         self.batch_size = batch_size
-        self.partition_size = partition_size
+        self.num_partitions = num_partitions
         self.shuffle = shuffle
         
         self.num_samples = len(dataset)
-        self.num_partitions = (self.num_samples + self.partition_size - 1) // self.partition_size
+        self.partition_size = self.num_samples // self.num_partitions
         self.partitions = self._create_partitions()
 
     def _create_partitions(self):
         indices = np.arange(self.num_samples)
         
+        # Partition and handle leftovers
         partitions = [
-            indices[i * self.partition_size:min((i + 1) * self.partition_size, self.num_samples)]
+            indices[i * self.partition_size:(i + 1) * self.partition_size]
             for i in range(self.num_partitions)
         ]
+        # Include any leftover samples in the last partition
+        leftover = indices[self.num_partitions * self.partition_size:]
+        if leftover.size > 0:
+            partitions[-1] = np.concatenate((partitions[-1], leftover))
         return partitions
 
     def __iter__(self):

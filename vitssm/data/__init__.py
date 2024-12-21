@@ -138,7 +138,7 @@ def get_dataset(config: DictConfig) -> Any:
                 RandomFrameVideoDataset(
                     data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
                     image_size=(res, res),
-                    transform_name="center",
+                    transform_name="resize",
                 ),
                 inp_size=config.get("resolution_x", 32),
                 scale_min=config.get("min_rescale_factor", 1),
@@ -205,7 +205,7 @@ def get_dataloaders_next_frame(
         batch_sampler=PartitionBatchSampler(
             train_set,
             batch_size=config.get("batch_size", 64),
-            partition_size=config.get("partition_size", 1000),
+            num_partitions=len(train_set.dataset.data) // 100,
             shuffle=True,
         ),
         num_workers=config.get("num_workers", 1),
@@ -218,7 +218,7 @@ def get_dataloaders_next_frame(
         batch_sampler=PartitionBatchSampler(
             eval_set,
             batch_size=config.get("val_batch_size", config.batch_size),
-            partition_size=config.get("partition_size", 1000),
+            num_partitions=len(eval_set.dataset.data) // 100,
             shuffle=False,
         ),
         num_workers=config.get("num_workers", 1),
@@ -244,7 +244,7 @@ def get_dataloaders_continuous_ae(
         batch_sampler=PartitionBatchSampler(
             train_set,
             batch_size=config.get("batch_size", 64),
-            partition_size=config.get("partition_size", 1000),
+            num_partitions=len(train_set.dataset.data) // 100,
             shuffle=True,
         ),
         num_workers=config.get("num_workers", 1),
@@ -257,7 +257,7 @@ def get_dataloaders_continuous_ae(
         batch_sampler=PartitionBatchSampler(
             eval_set,
             batch_size=config.get("val_batch_size", config.batch_size),
-            partition_size=config.get("partition_size", 1000),
+            num_partitions=len(eval_set.dataset.data) // 100,
             shuffle=False,
         ),
         num_workers=config.get("num_workers", 1),
@@ -278,7 +278,6 @@ def get_dataloaders_continuous_next_frame(
     eval_config["clip_length"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
     eval_config["frame_interval"] = eval_config["clip_length"]
     eval_config["mode"] = "test"
-    eval_config["load_in_memory"] = False
     eval_config["name"] = "vmdsprites-var-res-nextframe"
     
     train_set = get_dataset(config)
@@ -289,7 +288,7 @@ def get_dataloaders_continuous_next_frame(
         batch_sampler=PartitionBatchSampler(
             train_set,
             batch_size=config.get("batch_size", 64),
-            partition_size=config.get("partition_size", 1000),
+            num_partitions=len(train_set.dataset.data) // 100,
             shuffle=True,
         ),
         num_workers=config.get("num_workers", 1),
@@ -302,7 +301,7 @@ def get_dataloaders_continuous_next_frame(
         batch_sampler=PartitionBatchSampler(
             eval_set,
             batch_size=config.get("val_batch_size", config.batch_size),
-            partition_size=config.get("partition_size", 1000),
+            num_partitions=len(eval_set.dataset.data) // 100,
             shuffle=False,
         ),
         num_workers=config.get("num_workers", 1),
