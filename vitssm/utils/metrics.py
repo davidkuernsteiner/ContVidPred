@@ -4,6 +4,7 @@ import numpy as np
 from torch import Tensor
 from einops import rearrange
 from pandas import DataFrame
+from PIL import Image
 import torchmetrics
 from omegaconf.dictconfig import DictConfig
 import random
@@ -48,6 +49,42 @@ class AutoEncoderMetricCollectionWrapper:
         self.metrics.reset()
         self.sample = np.zeros(0)
         self.sample_pred = np.zeros(0)
+        
+        
+class VariableResolutionAutoEncoderMetricCollectionWrapper:
+    def __init__(self, metrics: MetricCollection, max_rescale_factor: int) -> None:
+        """Calculate metrics over the T dimension of [N, T, ...] tensors."""
+        super().__init__()
+        self.metrics = [deepcopy(metrics) for _ in range(max_rescale_factor)]
+        self.samples = [Image.fromarray(np.zeros(0)) for _ in range(max_rescale_factor)]
+        self.samples_pred = [Image.fromarray(np.zeros(0)) for _ in range(max_rescale_factor)]
+        
+    def update(self, x: Tensor, y: Tensor, rescale_factor: int) -> None:
+        sample_idx = random.randint(0, x.size(0) - 1)
+        self.samples_pred[rescale_factor - 1] = model_output_to_image(x.clone()[sample_idx])
+        self.samples[rescale_factor - 1] = model_output_to_image(y.clone()[sample_idx])
+        self.metrics[rescale_factor - 1].update(x, y)
+        
+    def compute(self) -> dict:
+        outs = {}
+        for i in range(len(self.metrics)):
+            metrics = self.metrics[i].compute()
+            samples = {
+                "ground truth vs. prediction": [
+                    wandb.Image(self.samples[i]),
+                    wandb.Image(self.samples_pred[i]),
+                ],
+            }
+            
+            outs[f"rescale_factor_{i + 1}"] = metrics | samples
+            
+        return outs
+    
+    def reset(self) -> None:
+        for i in range(len(self.metrics)):
+            self.metrics[i].reset()
+            self.samples[i] = Image.fromarray(np.zeros(0))
+            self.samples_pred[i] = Image.fromarray(np.zeros(0))
 
 
 class VideoAutoEncoderMetricCollectionWrapper:

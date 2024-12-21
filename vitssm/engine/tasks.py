@@ -407,7 +407,7 @@ class ContinuousNextFrameUPTEngine(ModelEngine):
 class SRNOEngine(ModelEngine):
     def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
         super().__init__(model, run_object, resume=resume)
-        self.metrics = VariableResolutionVideoAutoEncoderMetricCollectionWrapper(
+        self.metrics = VariableResolutionAutoEncoderMetricCollectionWrapper(
             self.metrics,
             run_object.dataset.max_rescale_factor,
         ) if self.metrics is not None else None
