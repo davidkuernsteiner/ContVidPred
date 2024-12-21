@@ -1,8 +1,8 @@
 project: 'ContVidPred'
 group: 'SRNO'
 name: 'vmdsprites-0-SRNO-EDSR'
-id: 'vmdsprites-0-SRNO-EDSR_20241222'
-resume: True
+id: 'vmdsprites-0-SRNO-EDSR_20241221_1'
+resume: False
 tags: ['srno', 'vmdsprites', 'baseline']
 log_freq: 50
 eval_freq: 1
