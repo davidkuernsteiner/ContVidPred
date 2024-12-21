@@ -1,7 +1,7 @@
 project: 'ContVidPred'
 group: 'UPT'
 name: 'vmdsprites-0-UPT_VAE_T-cont'
-id: 'vmdsprites-0-UPT_VAE_T-cont_20241221_0'
+id: 'vmdsprites-0-UPT_VAE_T-cont_20241221_1'
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 50
 eval_freq: 1
@@ -39,8 +39,8 @@ optimization:
              weight_decay: 0.01}
   scheduler:
     name: 'warm_cos_decay_scheduler'
-    kwargs: {warmup_steps: 10000,
-             decay_steps: 190000,
+    kwargs: {warmup_steps: 100,
+             decay_steps: 199900,
              gamma: 0.0}
     step_on_batch: True
   steps: 200000
