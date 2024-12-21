@@ -1,7 +1,7 @@
 project: 'ContVidPred'
 group: 'SRNO'
 name: 'vmdsprites-0-SRNO-EDSR'
-id: 'vmdsprites-0-SRNO-EDSR_20241221'
+id: 'vmdsprites-0-SRNO-EDSR_20241222'
 resume: False
 tags: ['srno', 'vmdsprites', 'baseline']
 log_freq: 50
@@ -20,7 +20,7 @@ dataset:
   min_rescale_factor: 1
   max_rescale_factor: 4
   train_percentage: 1.0
-  num_workers: 8
+  num_workers: 12
   persistent_workers: True
   pin_memory: True
   batch_size: 64
@@ -31,13 +31,12 @@ optimization:
     name: 'L1Loss'
     kwargs: {}
   optimizer:
-    name: 'AdamW'
-    kwargs: {lr: 0.001,
-             weight_decay: 0.01}
+    name: 'Adam'
+    kwargs: {lr: 0.0004}
   scheduler:
     name: 'warm_cos_decay_scheduler'
-    kwargs: {warmup_steps: 1,
-             decay_steps: 99999,
+    kwargs: {warmup_steps: 5000,
+             decay_steps: 95000,
              gamma: 0.0}
     step_on_batch: True
   steps: 100000
