@@ -126,6 +126,7 @@ class VariableResolutionVideoAutoEncoderMetricCollectionWrapper:
         self.metrics = [deepcopy(metrics) for _ in range(max_rescale_factor)]
         self.samples = [np.zeros(0) for _ in range(max_rescale_factor)]
         self.samples_pred = [np.zeros(0) for _ in range(max_rescale_factor)]
+        self.max_rescale_factor = max_rescale_factor
         
     def update(self, x: Tensor, y: Tensor, rescale_factor: int) -> None:
         sample_idx = random.randint(0, x.size(0) - 1)
@@ -205,7 +206,7 @@ class VariableResolutionRolloutMetricCollectionWrapper:
         """Calculate metrics over the T dimension of [N, T, ...] tensors."""
         super().__init__()
         self.metrics = metrics
-        self.results = [[]] * max_rescale_factor
+        self.results = [[] for _ in range(max_rescale_factor)]
         self.samples = [np.zeros(0) for _ in range(max_rescale_factor)]
         self.samples_pred = [np.zeros(0) for _ in range(max_rescale_factor)]
         self.max_rescale_factor = max_rescale_factor
@@ -230,7 +231,7 @@ class VariableResolutionRolloutMetricCollectionWrapper:
 
             sample_frames = {
                 "rollout: ground truth vs. prediction": [
-                    wandb.Video(self.samples[i],fps=4),
+                    wandb.Video(self.samples[i], fps=4),
                     wandb.Video(self.samples_pred[i], fps=4),
                 ],
             }
@@ -249,8 +250,7 @@ class VariableResolutionRolloutMetricCollectionWrapper:
         return results
     
     def reset(self) -> None:
-        for i in range(len(self.metrics)):
-            self.metrics.reset()
-            self.samples[i] = np.zeros(0)
-            self.samples_pred[i] = np.zeros(0)
-            self.results = [[]] * self.max_rescale_factor
+        self.results = [[] for _ in range(self.max_rescale_factor)]
+        self.samples = [np.zeros(0) for _ in range(self.max_rescale_factor)]
+        self.samples_pred = [np.zeros(0) for _ in range(self.max_rescale_factor)]
+        self.metrics.reset()

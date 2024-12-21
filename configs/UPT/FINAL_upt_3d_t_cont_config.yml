@@ -28,7 +28,7 @@ dataset:
   persistent_workers: True
   pin_memory: True
   batch_size: 64
-  val_batch_size: 64
+  val_batch_size: 16
   partition_size: 1000
 
 optimization:
