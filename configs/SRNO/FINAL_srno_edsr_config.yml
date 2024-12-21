@@ -6,7 +6,7 @@ resume: True
 tags: ['srno', 'vmdsprites', 'baseline']
 log_freq: 50
 eval_freq: 1
-checkpoint_freq: 9999999999999
+checkpoint_freq: 1000
 seed: 0
 
 dataset:
