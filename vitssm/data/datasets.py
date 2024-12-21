@@ -32,26 +32,34 @@ class VideoDataset(torch.utils.data.Dataset):
     """
     def __init__(
         self,
-        data_path: str | None = None,
-        num_frames: int = 16,
+        data_path: str,
+        video_length: int,
+        clip_length: int = 16,
         frame_interval: int = 1,
         image_size: tuple[int, int] = (32, 32),
         transform_name: str = "center",
     ):
         self.data_path = data_path
         self.data = read_file(data_path)
-        self.num_frames = num_frames
+        
+        self.video_length = video_length
+        self.clip_length = clip_length
         self.frame_interval = frame_interval
         self.image_size = image_size
+        
         self.transforms = get_transforms_video(transform_name, image_size)
+        
+        self.clips = []
+        for path in self.data["path"]:
+            clips = [(path, i, i+self.clip_length) for i in range(0, video_length - clip_length + 1, frame_interval)]
+            self.clips.extend(clips)
 
     def getitem(self, index: int):
-        sample = self.data.iloc[index]
-        path = sample["path"]
+        path, idx_start, idx_end = self.clips[index]
         # loading
         vframes, _ = read_video(path, backend="cv2")
         # Sampling video frames
-        video = temporal_random_crop(vframes, self.num_frames, self.frame_interval)
+        video = vframes[idx_start:idx_end]
         # transform
         video = self.transforms(video)  # T C H W
         # TCHW -> CTHW
@@ -70,7 +78,7 @@ class VideoDataset(torch.utils.data.Dataset):
         raise RuntimeError("Too many bad data.")
 
     def __len__(self):
-        return len(self.data)
+        return len(self.clips)
     
     
 class MemoryVideoDataset(torch.utils.data.Dataset):

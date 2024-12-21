@@ -28,6 +28,8 @@ class VAEEngine(ModelEngine):
             self.betas = np.ones(self.steps) * self.config.model.get("beta", 1.0)
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
+        
         beta = self.betas[self.state["step"] - 1]
         self.optimizer.zero_grad()
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
@@ -49,6 +51,8 @@ class VAEEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
+        
         beta = self.betas[self.state["step"] - 1]
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _posterior = self.eval_model.encode(_x).latent_dist
@@ -71,6 +75,8 @@ class NextFrameDiTEngine(ModelEngine):
     
     def _train_step(self, _context_frames: Tensor, _next_frame: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
+        _context_frames, _next_frame = _context_frames.to(self.device, non_blocking=True), _next_frame.to(self.device, non_blocking=True)
+        
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _loss = self.model.forward_train(_context_frames, _next_frame)
             
@@ -85,6 +91,8 @@ class NextFrameDiTEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
+        
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _frames = self.eval_model.rollout_frames(_x, _y.shape[1])
         self.metrics.update(_frames, _y)
@@ -103,6 +111,8 @@ class NextFrameUNetEngine(ModelEngine):
     
     def _train_step(self, _context_frames: Tensor, _next_frame: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
+        _context_frames, _next_frame = _context_frames.to(self.device, non_blocking=True), _next_frame.to(self.device, non_blocking=True)
+        
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _loss = self.model.forward_train(_context_frames, _next_frame)
             
@@ -117,6 +127,8 @@ class NextFrameUNetEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
+        
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             _frames = self.eval_model.rollout_frames(
                 _x,
@@ -139,13 +151,14 @@ class AutoEncoderUPTEngine(ModelEngine):
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
         b, t, c, h, w = _x.shape
         
         _x = rearrange(_x, "b t c h w -> (b t) c h w")
         output_pos = rearrange(
             torch.stack(torch.meshgrid([torch.arange(h), torch.arange(h)], indexing="ij")),
             "ndim height width -> (height width) ndim",
-        ).float().to(self.device)
+        ).float().to(self.device, non_blocking=True)
         output_pos = output_pos / (h - 1)  * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
@@ -163,13 +176,14 @@ class AutoEncoderUPTEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
         b, t, c, h, w = _x.shape
         
         _x = rearrange(_x, "b t c h w -> (b t) c h w")
         output_pos = rearrange(
             torch.stack(torch.meshgrid([torch.arange(h), torch.arange(h)], indexing="ij")),
             "ndim height width -> (height width) ndim",
-        ).float().to(self.device)
+        ).float().to(self.device, non_blocking=True)
         output_pos = output_pos / (h - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
@@ -192,14 +206,16 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
     
     def _train_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
+        
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
         b, t, c, h, w = _x.shape
         
         output_pos = rearrange(
             torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(h)], indexing="ij")),
             "ndim time height width -> (time height width) ndim",
-        ).float().to(self.device)
+        ).float().to(self.device, non_blocking=True)
 
-        dims = torch.tensor([t, h, w]).to(self.device)
+        dims = torch.tensor([t, h, w]).to(self.device, non_blocking=True)
         output_pos = output_pos / (dims - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
@@ -217,14 +233,15 @@ class VideoAutoEncoderUPTEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
         b, t, c, h, w = _x.shape
         
         output_pos = rearrange(
             torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(h)], indexing="ij")),
             "ndim time height width -> (time height width) ndim",
-        ).float().to(self.device)
+        ).float().to(self.device, non_blocking=True)
 
-        dims = torch.tensor([t, h, w]).to(self.device)
+        dims = torch.tensor([t, h, w]).to(self.device, non_blocking=True)
         output_pos = output_pos / (dims - 1) * 1000
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
@@ -253,13 +270,17 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
         self.optimizer.zero_grad()
         
         coords, values = _y["coords"], _y["values"]
-        _x, coords, values = _x.to(self.device), coords.to(self.device), values.to(self.device)
+        _x, coords, values = (
+            _x.to(self.device, non_blocking=True), 
+            coords.to(self.device, non_blocking=True), 
+            values.to(self.device, non_blocking=True)
+        )
         
         b, t, c, h, w = _x.shape
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x.to(self.device), output_pos=coords.to(self.device))
-            _loss = self.criterion(_pred, values.to(self.device))
+            _pred = self.model(_x, output_pos=coords)
+            _loss = self.criterion(_pred, values)
             
         self.scaler.scale(_loss).backward()
         self.scaler.step(self.optimizer)
@@ -273,7 +294,7 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
         self.model.decoder.unbatch_mode = "video"
-        _x, _y = _x.to(self.device), _y.to(self.device)
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
         b, x_t, c, x_h, x_w = _x.shape
         b, y_t, c, y_h, y_w = _y.shape
         
@@ -290,9 +311,9 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
             output_pos = rearrange(
                 torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(w)], indexing="ij")),
                 "ndim time height width -> (time height width) ndim",
-            ).float().to(self.device)
+            ).float().to(self.device, non_blocking=True)
 
-            dims = torch.tensor([t, h, w]).to(self.device)
+            dims = torch.tensor([t, h, w]).to(self.device, non_blocking=True)
             output_pos = output_pos / (dims - 1) * 1000
 
             with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
@@ -358,7 +379,7 @@ class ContinuousNextFrameUPTEngine(ModelEngine):
     def _train_step(self, context_frames: Tensor, next_frame: Tensor) -> dict[str, float]:
         self.optimizer.zero_grad()
 
-        context_frames, next_frame = context_frames.to(self.device), next_frame.to(self.device)
+        context_frames, next_frame = context_frames.to(self.device, non_blocking=True), next_frame.to(self.device, non_blocking=True)
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             x_next_pred, x_next = self.model.forward_train(context_frames, next_frame)
@@ -375,7 +396,7 @@ class ContinuousNextFrameUPTEngine(ModelEngine):
     
     @torch.no_grad()
     def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
-        _x, _y = _x.to(self.device), _y.to(self.device)
+        _x, _y = _x.to(self.device, non_blocking=True), _y.to(self.device, non_blocking=True)
         b, x_t, c, x_h, x_w = _x.shape
         b, y_t, c, y_h, y_w = _y.shape
 

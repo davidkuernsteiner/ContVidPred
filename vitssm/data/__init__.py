@@ -10,6 +10,7 @@ from torchvision.transforms.v2 import Compose, Normalize, Resize, ToDtype, Inter
 
 from .datasets import *
 from .wrappers import *
+from .samplers import PartitionBatchSampler
 from .utils import get_transforms_video
 
 
@@ -69,7 +70,7 @@ def get_dataset(config: DictConfig) -> Any:
             if config.get("load_in_memory", True):
                 return AEDatasetWrapper(
                     MemoryVideoDataset(
-                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
+                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
                         num_frames=config.get("num_frames", 10),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
@@ -80,8 +81,9 @@ def get_dataset(config: DictConfig) -> Any:
             else:
                 return AEDatasetWrapper(
                     VideoDataset(
-                        data_path=str(data_root / "VMDsprites" / "folds" / fold),
-                        num_frames=config.get("num_frames", 10),
+                        data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
+                        video_length=config.get("video_length", 50),
+                        clip_length=config.get("clip_length", 8),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
                         transform_name=config.get("transform_name", "center"),
@@ -110,10 +112,11 @@ def get_dataset(config: DictConfig) -> Any:
                 return VariableResolutionAEDatasetWrapper(
                     VideoDataset(
                         data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        num_frames=config.get("num_frames", 10),
+                        video_length=config.get("video_length", 50),
+                        clip_length=config.get("clip_length", 8),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
-                        transform_name="cont_center",
+                        transform_name=config.get("transform_name", "center"),
                     ),
                     res_x=config.get("resolution_x", 32),
                     train=config.get("mode", "train") == "train",
@@ -139,7 +142,8 @@ def get_dataset(config: DictConfig) -> Any:
                 return NextFrameDatasetWrapper(
                     VideoDataset(
                         data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        num_frames=config.get("num_frames", 10),
+                        video_length=config.get("video_length", 50),
+                        clip_length=config.get("clip_length", 8),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
                         transform_name=config.get("transform_name", "center"),
@@ -167,10 +171,11 @@ def get_dataset(config: DictConfig) -> Any:
                 return VariableResolutionNextFrameDatasetWrapper(
                     VideoDataset(
                         data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
-                        num_frames=config.get("num_frames", 10),
+                        video_length=config.get("video_length", 50),
+                        clip_length=config.get("clip_length", 8),
                         frame_interval=config.get("frame_interval", 1),
                         image_size=(res, res),
-                        transform_name="cont_center",
+                        transform_name=config.get("transform_name", "center"),
                     ),
                     res_x=config.get("resolution_x", 32),
                     context_length=config.get("context_length", 1),
@@ -242,14 +247,18 @@ def get_dataloaders_next_frame(
     train_set = get_dataset(config)
     
     eval_config = config.copy()
-    eval_config["num_frames"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
+    eval_config["clip_length"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
     eval_config["mode"] = "test"
     eval_set = get_dataset(eval_config)
     
     train_loader = DataLoader(
         train_set,
-        batch_size=config.batch_size,
-        shuffle=True,
+        batch_sampler=PartitionBatchSampler(
+            train_set,
+            batch_size=config.get("batch_size", 64),
+            partition_size=config.get("partition_size", 1000),
+            shuffle=True,
+        ),
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
         persistent_workers=config.get("persistent_workers", False),
@@ -257,8 +266,12 @@ def get_dataloaders_next_frame(
     
     eval_loader = DataLoader(
         eval_set,
-        batch_size=config.get("val_batch_size", config.batch_size),
-        shuffle=False,
+        batch_sampler=PartitionBatchSampler(
+            eval_set,
+            batch_size=config.get("val_batch_size", config.batch_size),
+            partition_size=config.get("partition_size", 1000),
+            shuffle=False,
+        ),
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
         persistent_workers=config.get("persistent_workers", False),
@@ -274,12 +287,17 @@ def get_dataloaders_continuous_ae(
     
     eval_config = config.copy()
     eval_config["mode"] = "test"
+    eval_config["frame_interval"] = eval_config["clip_length"]
     eval_set = get_dataset(eval_config)
     
     train_loader = DataLoader(
         train_set,
-        batch_size=config.batch_size,
-        shuffle=True,
+        batch_sampler=PartitionBatchSampler(
+            train_set,
+            batch_size=config.get("batch_size", 64),
+            partition_size=config.get("partition_size", 1000),
+            shuffle=True,
+        ),
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
         persistent_workers=config.get("persistent_workers", False),
@@ -287,8 +305,12 @@ def get_dataloaders_continuous_ae(
     
     eval_loader = DataLoader(
         eval_set,
-        batch_size=config.get("val_batch_size", config.batch_size),
-        shuffle=False,
+        batch_sampler=PartitionBatchSampler(
+            eval_set,
+            batch_size=config.get("val_batch_size", config.batch_size),
+            partition_size=config.get("partition_size", 1000),
+            shuffle=False,
+        ),
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
         persistent_workers=config.get("persistent_workers", False),
@@ -304,7 +326,8 @@ def get_dataloaders_continuous_next_frame(
     eval_config = config.copy()
     
     config["resolution"] = config["resolution_x"]
-    eval_config["num_frames"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
+    eval_config["clip_length"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
+    eval_config["frame_interval"] = eval_config["clip_length"]
     eval_config["mode"] = "test"
     eval_config["load_in_memory"] = False
     eval_config["name"] = "vmdsprites-var-res-nextframe"
@@ -314,8 +337,12 @@ def get_dataloaders_continuous_next_frame(
     
     train_loader = DataLoader(
         train_set,
-        batch_size=config.batch_size,
-        shuffle=True,
+        batch_sampler=PartitionBatchSampler(
+            train_set,
+            batch_size=config.get("batch_size", 64),
+            partition_size=config.get("partition_size", 1000),
+            shuffle=True,
+        ),
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
         persistent_workers=config.get("persistent_workers", False),
@@ -323,8 +350,12 @@ def get_dataloaders_continuous_next_frame(
     
     eval_loader = DataLoader(
         eval_set,
-        batch_size=config.get("val_batch_size", config.batch_size),
-        shuffle=False,
+        batch_sampler=PartitionBatchSampler(
+            eval_set,
+            batch_size=config.get("val_batch_size", config.batch_size),
+            partition_size=config.get("partition_size", 1000),
+            shuffle=False,
+        ),
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
         persistent_workers=config.get("persistent_workers", False),

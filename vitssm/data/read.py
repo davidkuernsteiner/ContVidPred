@@ -4,6 +4,7 @@ import os
 import re
 import warnings
 from fractions import Fraction
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import av
@@ -213,6 +214,7 @@ def _read_from_stream(
 
 
 #TAKEN FROM: https://github.com/hpcaitech/Open-Sora.git
+@lru_cache(maxsize=1000)
 def read_video_cv2(video_path):
     cap = cv2.VideoCapture(video_path)
 

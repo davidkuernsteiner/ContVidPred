@@ -1,12 +1,12 @@
 project: 'ContVidPred'
 group: 'UPT'
 name: 'vmdsprites-0-UPT_VAE_T-cont'
-id: 'vmdsprites-0-UPT_VAE_T-cont_20241214_150239'
-resume: True
+id: 'vmdsprites-0-UPT_VAE_T-cont_20241221'
+resume: False
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 50
-eval_freq: 100
-checkpoint_freq: 9999999999999
+eval_freq: 1
+checkpoint_freq: 1000
 seed: 0
 
 dataset:
@@ -15,7 +15,8 @@ dataset:
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
-  num_frames: 4
+  video_length: 108
+  clip_length: 4
   frame_interval: 1
   resolution: 128
   resolution_x: 32
@@ -26,6 +27,7 @@ dataset:
   pin_memory: True
   batch_size: 64
   val_batch_size: 16
+  partition_size: 1000
 
 optimization:
   loss:
@@ -37,11 +39,11 @@ optimization:
              weight_decay: 0.01}
   scheduler:
     name: 'warm_cos_decay_scheduler'
-    kwargs: {warmup_steps: 100,
-             decay_steps: 99900,
+    kwargs: {warmup_steps: 0,
+             decay_steps: 200000,
              gamma: 0.0}
     step_on_batch: True
-  steps: 100000
+  steps: 200000
 
 metrics:
   SSIM:

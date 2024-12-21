@@ -13,12 +13,9 @@ from torchvision.io import write_video
 from vitssm.data.mdsprites.generators import generate_videos
 from vitssm.data.mdsprites.shapes import Circle, Rectangle, Triangle
 
-def split_list(lst: list, percentage: float) -> tuple[list, list]:
+def split_list(lst: list, split_index: int) -> tuple[list, list]:
     # Shuffle the list to randomize order
     random.shuffle(lst)
-    
-    # Calculate split index
-    split_index = int(len(lst) * percentage)
 
     # Split the list
     part1 = lst[:split_index]
@@ -31,12 +28,12 @@ def main(
     generate_masks: bool,
     resolution: int,
     n_shapes: int,
-    n_videos: int,
+    n_train_videos: int,
+    n_eval_videos: int,
     video_length: int,
     background: str,
     exist_ok: bool,
     n_folds: int = 5,
-    train_ratio: float = 0.8,
 ) -> None:
     
     data_folder = Path(output_dir)
@@ -62,9 +59,9 @@ def main(
 
     video_paths = []
     for i in tqdm(
-        range(n_videos),
+        range(n_train_videos + n_eval_videos),
         desc="Generating videos",
-        total=n_videos,
+        total=n_train_videos + n_eval_videos,
     ):
         video, masks = next(video_generator)
         video_path = data_folder / "videos" / f"video_{i}.avi"
@@ -81,7 +78,7 @@ def main(
     fold_dir = data_folder / "folds"
     os.makedirs(fold_dir, exist_ok=True)
     for fold_idx in range(n_folds):
-        train_split, test_split = split_list(video_paths, train_ratio)       
+        train_split, test_split = split_list(video_paths, n_train_videos)       
         pd.DataFrame({"path": train_split}).to_csv(fold_dir / f"train_{fold_idx}.csv", index=False)
         pd.DataFrame({"path": test_split}).to_csv(fold_dir / f"test_{fold_idx}.csv", index=False)   
 
@@ -93,12 +90,12 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--masks", help="Whether to generate masks", action="store_true")
     parser.add_argument("--resolution", help="Resolution of the video", default=64, type=int)
     parser.add_argument("--n_shapes", help="Maximum number of shapes", default=4, type=int)
-    parser.add_argument("--n_videos", help="Number of videos to generate", default=100, type=int)
+    parser.add_argument("--n_train_videos", help="Number of training videos to generate", default=1000, type=int)
+    parser.add_argument("--n_eval_videos", help="Number of evaluation videos to generate", default=100, type=int)
     parser.add_argument("--video_length", help="Length of the video", default=100, type=int)
     parser.add_argument("--background", help="Background color", default="black", type=str)
     parser.add_argument("--exist_ok", help="Allow multiple VMDsprites datasets", action="store_true")
     parser.add_argument("--n_folds", help="Number of folds", default=5, type=int)
-    parser.add_argument("--train_ratio", help="Train ratio", default=0.8, type=float)
 
     args = parser.parse_args()
 
@@ -107,10 +104,10 @@ if __name__ == "__main__":
         generate_masks=args.masks,
         resolution=args.resolution,
         n_shapes=args.n_shapes,
-        n_videos=args.n_videos,
+        n_train_videos=args.n_train_videos,
+        n_eval_videos=args.n_eval_videos,
         video_length=args.video_length,
         background=args.background,
         exist_ok=args.exist_ok,
         n_folds=args.n_folds,
-        train_ratio=args.train_ratio,
     )
