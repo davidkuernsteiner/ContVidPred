@@ -18,6 +18,8 @@ from kappamodules.vit import VitBlock
 from torch import nn
 import math
 
+from ._modules import AffineTransformation
+
 
 # Taken from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/encoder_image.py
 class EncoderImage(nn.Module):
@@ -34,7 +36,7 @@ class EncoderImage(nn.Module):
             num_latent_tokens=None,
             cond_dim=None,
             init_weights="truncnormal",
-            norm_output=True,
+            ln_regularization=True,
     ):
         super().__init__()
         patch_size = to_2tuple(patch_size)
@@ -59,7 +61,11 @@ class EncoderImage(nn.Module):
             patch_size=patch_size,
         )
         self.pos_embed = VitPosEmbed2d(seqlens=self.patch_embed.seqlens, dim=enc_dim, is_learnable=False)
-        self.out_norm = nn.LayerNorm(enc_dim, eps=1e-6) if norm_output else nn.Identity()
+        self.out_norm = nn.LayerNorm(
+            enc_dim, 
+            eps=1e-6,
+            elementwise_affine=False,
+        ) if ln_regularization else nn.Identity()
 
         # blocks
         if cond_dim is None:
@@ -142,7 +148,7 @@ class EncoderVideo(nn.Module):
             num_latent_tokens=None,
             cond_dim=None,
             init_weights="truncnormal",
-            norm_output=True,
+            ln_regularization=True,
     ):
         super().__init__()
         self.input_dim = input_dim
@@ -165,7 +171,11 @@ class EncoderVideo(nn.Module):
             patch_size=patch_size,
         )
         self.pos_embed = VitPosEmbed3d(seqlens=self.patch_embed.seqlens, dim=enc_dim, is_learnable=False)
-        self.out_norm = nn.LayerNorm(enc_dim, eps=1e-6) if norm_output else nn.Identity()
+        self.out_norm = nn.LayerNorm(
+            enc_dim,
+            eps=1e-6,
+            elementwise_affine=False,
+        ) if ln_regularization else nn.Identity()
 
         # blocks
         if cond_dim is None:
@@ -249,6 +259,7 @@ class DecoderPerceiver(nn.Module):
             perc_num_heads=None,
             cond_dim=None,
             init_weights="truncnormal002",
+            ln_regularization=True,
             **kwargs,
     ):
         super().__init__(**kwargs)
@@ -266,8 +277,8 @@ class DecoderPerceiver(nn.Module):
         self.init_weights = init_weights
         self.unbatch_mode = unbatch_mode
 
-        # input projection
-        self.input_proj = LinearProjection(input_dim, dim, init_weights=init_weights, optional=True)
+        # input affine transformation
+        self.input_affine = AffineTransformation(input_dim) if ln_regularization else nn.Identity()
 
         # blocks
         if cond_dim is None:
@@ -320,7 +331,7 @@ class DecoderPerceiver(nn.Module):
             cond_kwargs["cond"] = condition
 
         # input projection
-        x = self.input_proj(x)
+        x = self.input_affine(x)
 
         # apply blocks
         x = self.blocks(x, **cond_kwargs)
@@ -372,6 +383,7 @@ class UPTImageAutoencoderConfig(BaseModel):
     perc_dim: int = 96
     perc_num_heads: int = 4
     num_latent_tokens: int = 32
+    ln_regularization: bool = True
     
 
 # Adapted from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/upt_image_autoencoder.py
@@ -387,6 +399,7 @@ class UPTImageAutoencoder(nn.Module):
         perc_dim: int = 96,
         perc_num_heads: int = 4,
         num_latent_tokens: int = 64,
+        ln_regularization: bool = True,
     ):
         super().__init__()
         self.encoder = EncoderImage(
@@ -399,6 +412,7 @@ class UPTImageAutoencoder(nn.Module):
             perc_dim=perc_dim,
             perc_num_heads=perc_num_heads,
             num_latent_tokens=num_latent_tokens,
+            ln_regularization=ln_regularization,
         )
         self.decoder = DecoderPerceiver(
             input_dim=latent_dim,
@@ -410,6 +424,7 @@ class UPTImageAutoencoder(nn.Module):
             perc_dim=perc_dim,
             perc_num_heads=perc_num_heads,
             unbatch_mode="image",
+            ln_regularization=ln_regularization,
         )
 
     def forward(self, x: Tensor, output_pos: Tensor):
@@ -435,6 +450,7 @@ class UPTVideoAutoencoderConfig(BaseModel):
     perc_dim: int = 96
     perc_num_heads: int = 4
     num_latent_tokens: int = 32
+    ln_regularization: bool = True
 
 
 # Adapted from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/upt_image_autoencoder.py
@@ -450,6 +466,7 @@ class UPTVideoAutoencoder(nn.Module):
         perc_dim: int = 96,
         perc_num_heads: int = 4,
         num_latent_tokens: int = 64,
+        ln_regularization: bool = True,
     ):
         super().__init__()
         self.encoder = EncoderVideo(
@@ -462,6 +479,7 @@ class UPTVideoAutoencoder(nn.Module):
             perc_dim=perc_dim,
             perc_num_heads=perc_num_heads,
             num_latent_tokens=num_latent_tokens,
+            ln_regularization=ln_regularization,
         )
         self.decoder = DecoderPerceiver(
             input_dim=latent_dim,
@@ -473,6 +491,7 @@ class UPTVideoAutoencoder(nn.Module):
             perc_dim=perc_dim,
             perc_num_heads=perc_num_heads,
             unbatch_mode="video",
+            ln_regularization=ln_regularization,
         )
 
     def forward(self, x: Tensor, output_pos: Tensor):
