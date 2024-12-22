@@ -1,9 +1,9 @@
 project: 'ContVidPred'
 group: 'UPT'
 name: 'vmdsprites-0-UPT_3D_T-cont'
-id: 'vmdsprites-0-UPT_3D_T-cont_20241221_4'
+id: 'vmdsprites-0-UPT_3D_T-cont_20241222_0'
 tags: ['upt', 'vmdsprites', 'tiny']
-log_freq: 50
+log_freq: 100
 eval_freq: 1
 checkpoint_freq: 1000
 seed: 0
@@ -65,4 +65,4 @@ model:
                            ln_regularization: True}
   upt_autoencoder_checkpoint_path: '/content/drive/MyDrive/data/checkpoints/ContVidPred/UPT/vmdsprites-0-UPT_VAE_T-cont.pth'
   upt_approximator_type: 'UPTA_T'
-  upt_approximator_kwargs: {}
+  upt_approximator_kwargs: {ln_regularization: True}

@@ -17,6 +17,7 @@ class UPTApproximator(nn.Module):
             dim=None,
             cond_dim=None,
             init_weights="truncnormal002",
+            ln_regularization=True,
             **kwargs,
     ):
         super().__init__(**kwargs)
@@ -27,9 +28,8 @@ class UPTApproximator(nn.Module):
         self.cond_dim = cond_dim
         self.init_weights = init_weights
 
-        # project
-        self.input_proj = LinearProjection(input_dim, dim, init_weights=init_weights, optional=True)
-        self.layer_norm = nn.LayerNorm(dim, eps=1e-6)
+        # ln regularization
+        self.last_layer = nn.LayerNorm(dim, eps=1e-6, elementwise_affine=False) if ln_regularization else nn.Identity()
 
         # blocks
         if cond_dim is None:
@@ -58,13 +58,10 @@ class UPTApproximator(nn.Module):
         if condition is not None:
             cond_kwargs["cond"] = condition
 
-        # project to decoder dim
-        x = self.input_proj(x)
-
         # apply blocks
         x = self.blocks(x, **cond_kwargs)
 
-        return self.layer_norm(x)
+        return self.last_layer(x)
     
     
 #Adapted from https://github.com/BenediktAlkin/upt-minimal/blob/main/upt/models/approximator.py
