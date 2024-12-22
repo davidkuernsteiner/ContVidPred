@@ -33,7 +33,7 @@ optimization:
     kwargs: {}
   optimizer:
     name: 'AdamW'
-    kwargs: {lr: 0.0001,
+    kwargs: {lr: 0.001,
              weight_decay: 0.01}
   scheduler:
     name: 'warm_cos_decay_scheduler'
