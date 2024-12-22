@@ -62,8 +62,6 @@ class VideoDataset(torch.utils.data.Dataset):
         video = vframes[idx_start:idx_end]
         # transform
         video = self.transforms(video)  # T C H W
-        # TCHW -> CTHW
-        #video = video.permute(1, 0, 2, 3)
 
         return video
 
@@ -80,56 +78,12 @@ class VideoDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.clips)
     
-    
-class MemoryVideoDataset(torch.utils.data.Dataset):
-    """load video according to the csv file.
 
-    Args:
-        target_video_len (int): the number of video frames will be load.
-        align_transform (callable): Align different videos in a specified size.
-        temporal_sample (callable): Sample the target length of a video.
-    """
-    def __init__(
-        self,
-        data_path: str | None = None,
-        num_frames: int = 16,
-        frame_interval: int = 1,
-        image_size: tuple[int, int] = (32, 32),
-        transform_name: str = "center",
-    ):
-        self.data_path = data_path
-        self.paths = read_file(data_path)
-        self.num_frames = num_frames
-        self.frame_interval = frame_interval
-        self.image_size = image_size
-        self.transforms = get_transforms_video(transform_name, image_size)
-        self.resize = transforms.UCFCenterCropVideo(image_size[0], interpolation_mode="bilinear")
-        
-        self.data = []
-        for path in self.paths["path"]:
-            vframes, _ = read_video(path, backend="cv2")
-            self.data.append(self.resize(vframes))
-            
-
-    def __getitem__(self, index: int):
-        sample = self.data[index]
-        # Sampling video frames
-        video = temporal_random_crop(sample, self.num_frames, self.frame_interval)
-        # transform
-        video = self.transforms(video)  # T C H W
-        # TCHW -> CTHW
-        #video = video.permute(1, 0, 2, 3)
-
-        return video
-
-    def __len__(self):
-        return len(self.data)
-    
-
-class RandomFrameVideoDataset(torch.utils.data.Dataset):
+class VideoFrameDataset(torch.utils.data.Dataset):
     def __init__(
             self,
-            data_path: str | None = None,
+            data_path: str,
+            video_length: int,
             image_size: tuple[int, int] = (32, 32),
             transform_name="resize",
         ):
@@ -139,6 +93,7 @@ class RandomFrameVideoDataset(torch.utils.data.Dataset):
             transform (callable, optional): Optional transform to be applied on a sample.
         """
         self.data_path = data_path
+        self.video_length = video_length
         self.paths = read_file(data_path)
         self.image_size = image_size
         self.transforms = get_transforms_image(transform_name, image_size)
@@ -147,10 +102,7 @@ class RandomFrameVideoDataset(torch.utils.data.Dataset):
     def _get_all_frame_indices(self):
         frame_indices = []
         for video_path in self.paths["path"]:
-            cap = cv2.VideoCapture(video_path)
-            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            frame_indices.extend([(video_path, i) for i in range(frame_count)])
-            cap.release()
+            frame_indices.extend([(video_path, i) for i in range(self.video_length)])
         return frame_indices
 
     def __len__(self):
@@ -158,24 +110,12 @@ class RandomFrameVideoDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         video_path, frame_idx = self.frame_indices[idx]
-        frame = self._get_frame(video_path, frame_idx)
+        vframes, _ = read_video(video_path, backend="cv2")
+        frame = vframes[frame_idx]
         
         if self.transforms:
             frame = self.transforms(frame)
         
-        return frame
-
-    def _get_frame(self, video_path, frame_idx):
-        cap = cv2.VideoCapture(video_path)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
-        ret, frame = cap.read()
-        cap.release()
-        
-        if not ret:
-            raise ValueError(f"Frame {frame_idx} is not available in video {video_path}")
-            
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = Image.fromarray(frame)
         return frame
     
     

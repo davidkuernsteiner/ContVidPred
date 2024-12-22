@@ -1,7 +1,7 @@
 project: 'ContVidPred'
 group: 'UPT'
 name: 'vmdsprites-0-UPT_3D_T-cont'
-id: 'vmdsprites-0-UPT_3D_T-cont_20241222_1'
+id: 'vmdsprites-0-UPT_3D_T-cont_20241222_2'
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 100
 eval_freq: 1
@@ -31,7 +31,7 @@ dataset:
 
 optimization:
   loss:
-    name: 'MSELoss'
+    name: 'L1Loss'
     kwargs: {}
   optimizer:
     name: 'AdamW'
