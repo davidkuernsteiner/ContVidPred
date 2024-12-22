@@ -1,8 +1,8 @@
 project: 'ContVidPred'
-group: 'UPT'
-name: 'vmdsprites-0-UPT_VAE_T-cont_scale'
-id: 'vmdsprites-0-UPT_VAE_T-cont_20241222_0'
-tags: ['upt', 'vmdsprites', 'tiny']
+group: 'DIT'
+name: 'vmdsprites-0-DiT_T_2-32'
+id: 'vmdsprites-0-DiT_T_2-32_20241222_0'
+tags: ['dit', 'vmdsprites', 'tiny']
 log_freq: 100
 eval_freq: 1
 checkpoint_freq: 1000
@@ -10,22 +10,22 @@ seed: 0
 resume: False
 
 dataset:
-  name: 'vmdsprites-var-res-ae'
+  name: 'vmdsprites-nextframe'
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
   video_length: 108
-  clip_length: 4
+  clip_length: 5
+  context_length: 4
+  rollout_length: 32
   frame_interval: 1
-  resolution: 128
-  resolution_x: 32
-  max_rescale_factor: 4
+  resolution: 32
   train_percentage: 1.0
   num_workers: 2
   persistent_workers: False
   pin_memory: False
   batch_size: 64
-  val_batch_size: 16
+  val_batch_size: 32
 
 optimization:
   loss:
@@ -33,15 +33,19 @@ optimization:
     kwargs: {}
   optimizer:
     name: 'AdamW'
-    kwargs: {lr: 0.001,
+    kwargs: {lr: 0.0001,
              weight_decay: 0.01}
   scheduler:
     name: 'warm_cos_decay_scheduler'
     kwargs: {warmup_steps: 0,
-             decay_steps: 200000,
+             decay_steps: 100000,
              gamma: 0.0}
     step_on_batch: True
-  steps: 200000
+  #scheduler:
+  #  name: 'StepLR'
+  #  kwargs: {step_size: 1, gamma: 1.0}
+  #  step_on_batch: False
+  steps: 100000
 
 metrics:
   SSIM:
@@ -52,19 +56,21 @@ metrics:
     kwargs: {}
 
 model:
-  name: 'upt_vae'
+  name: 'dit'
   device: 'cuda'
   use_amp: False
   use_ema: False
   ema_steps: 1
 
-  input_dim: 3
-  patch_size: [2, 2, 2]
-  resolution: [4, 32, 32]
-  latent_dim: 96
-  num_heads: 4
-  depth: 8
-  perc_dim: 96
-  perc_num_heads: 4
-  num_latent_tokens: 32
-  ln_regularization: True
+  vae_type: "vae-tiny"
+  vae_checkpoint_path: Null
+  dit_type: "DiT_T_2"
+  dit_kwargs: {
+    input_size: 32,
+    in_channels: 15,
+    out_channels: 3,
+  }
+  diffusion_steps: 1000
+  timestep_respacing: "trailing25"
+  predict_target: "velocity"
+  rescale_betas_zero_snr: True

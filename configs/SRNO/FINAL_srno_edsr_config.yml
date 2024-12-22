@@ -2,27 +2,27 @@ project: 'ContVidPred'
 group: 'SRNO'
 name: 'vmdsprites-0-SRNO-EDSR'
 id: 'vmdsprites-0-SRNO-EDSR_20241221_1'
-resume: False
 tags: ['srno', 'vmdsprites', 'baseline']
 log_freq: 50
 eval_freq: 1
 checkpoint_freq: 1000
 seed: 0
+resume: False
 
 dataset:
   name: 'vmdsprites-srno'
-  load_in_memory: False
   mode: 'train'
   fold: '0'
   output_format: 'TCHW'
+  video_length: 108
   resolution: 128
   resolution_x: 32
   min_rescale_factor: 1
   max_rescale_factor: 4
   train_percentage: 1.0
-  num_workers: 12
-  persistent_workers: True
-  pin_memory: True
+  num_workers: 2
+  persistent_workers: False
+  pin_memory: False
   batch_size: 64
   val_batch_size: 64
 

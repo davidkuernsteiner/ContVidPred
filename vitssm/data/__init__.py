@@ -194,11 +194,12 @@ def get_dataloaders(
 def get_dataloaders_next_frame(
     config: DictConfig,
 ) -> tuple[DataLoader, DataLoader]:
-    train_set = get_dataset(config)
-    
     eval_config = config.copy()
     eval_config["clip_length"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
     eval_config["mode"] = "test"
+    eval_config["frame_interval"] = eval_config["clip_length"]
+    
+    train_set = get_dataset(config)
     eval_set = get_dataset(eval_config)
     
     train_loader = DataLoader(

@@ -69,7 +69,7 @@ class VAEEngine(ModelEngine):
     
     
 class NextFrameDiTEngine(ModelEngine):
-    def __init__(self, model: NextFrameDiTModel, run_object: DictConfig, resume: bool = False) -> None:
+    def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
         super().__init__(model, run_object, resume=resume)
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
@@ -105,7 +105,7 @@ class NextFrameDiTEngine(ModelEngine):
 
 
 class NextFrameUNetEngine(ModelEngine):
-    def __init__(self, model: NextFrameUNetModel, run_object: DictConfig, resume: bool = False) -> None:
+    def __init__(self, model: nn.Module, run_object: DictConfig, resume: bool = False) -> None:
         super().__init__(model, run_object, resume=resume)
         self.metrics = RolloutMetricCollectionWrapper(self.metrics) if self.metrics is not None else None
     
@@ -440,8 +440,6 @@ class SRNOEngine(ModelEngine):
             batch[k] = v.to(self.device, non_blocking=False)
         
         inp, coord, cell, gt = batch.values()
-        F.normalize(inp, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
-        F.normalize(gt, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
             pred = self.model(inp, coord, cell)
@@ -463,8 +461,6 @@ class SRNOEngine(ModelEngine):
                 batch[k] = v.to(self.device, non_blocking=False)
 
             inp, coord, cell, gt = batch.values()
-            F.normalize(inp, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
-            F.normalize(gt, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
 
             with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
                 pred = self.eval_model(inp, coord, cell)

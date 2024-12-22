@@ -34,16 +34,16 @@ optimization:
     kwargs: {lr: 0.0001,
              weight_decay: 0.01}
   scheduler:
-    name: 'LambdaLR'
-    kwargs: {warmup_steps: 5000,
-             decay_steps: 195000,
-             gamma: 1.0}
+    name: 'warm_cos_decay_scheduler'
+    kwargs: {warmup_steps: 0,
+             decay_steps: 100000,
+             gamma: 0.0}
     step_on_batch: True
   #scheduler:
   #  name: 'StepLR'
   #  kwargs: {step_size: 1, gamma: 1.0}
   #  step_on_batch: False
-  steps: 200000
+  steps: 100000
 
 metrics:
   SSIM:

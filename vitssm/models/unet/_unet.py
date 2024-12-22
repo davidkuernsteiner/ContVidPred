@@ -85,8 +85,8 @@ def UNet_T(**kwargs):
         up_block_types=("AttnUpBlock2D", "UpBlock2D"),
         block_out_channels=(64, 128),
         layers_per_block=2,
-        attention_head_dim=4,
-        norm_num_groups=16,
+        attention_head_dim=2,
+        norm_num_groups=8,
         **kwargs,
     )
 
@@ -97,7 +97,7 @@ def UNet_M(**kwargs):
         block_out_channels=(32, 64),
         layers_per_block=2,
         attention_head_dim=2,
-        norm_num_groups=16,
+        norm_num_groups=8,
         **kwargs,
     )
     
