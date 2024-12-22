@@ -135,15 +135,16 @@ def get_dataset(config: DictConfig) -> Any:
             res = config.get("resolution", 64)
             
             return SRImplicitDownsampledFast(
-                RandomFrameVideoDataset(
+                VideoFrameDataset(
                     data_path=str(data_root / "VMDsprites_128" / "folds" / fold),
+                    video_length=config.get("video_length", 50),
                     image_size=(res, res),
-                    transform_name="resize",
+                    transform_name=None,
                 ),
                 inp_size=config.get("resolution_x", 32),
                 scale_min=config.get("min_rescale_factor", 1),
                 scale_max=config.get("max_rescale_factor", 4),
-                augment=config.get("mode", "train") == "train",
+                train=config.get("mode", "train") == "train",
             )
 
         case _:
@@ -319,8 +320,12 @@ def get_dataloaders_srno(
     
     train_loader = DataLoader(
         train_set,
-        batch_size=config.batch_size,
-        shuffle=True,
+        batch_sampler=PartitionBatchSampler(
+            train_set,
+            batch_size=config.get("batch_size", 64),
+            num_partitions=len(train_set.dataset.data) // 100,
+            shuffle=True,
+        ),
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
         persistent_workers=config.get("persistent_workers", False),
@@ -337,8 +342,12 @@ def get_dataloaders_srno(
         
         eval_loader = DataLoader(
             eval_set,
-            batch_size=config.get("val_batch_size", config.batch_size),
-            shuffle=False,
+            batch_sampler=PartitionBatchSampler(
+                eval_set,
+                batch_size=config.get("val_batch_size", config.batch_size),
+                num_partitions=len(eval_set.dataset.data) // 100,
+                shuffle=False,
+            ),
             num_workers=config.get("num_workers", 1),
             pin_memory=config.get("pin_memory", False),
             persistent_workers=config.get("persistent_workers", False),

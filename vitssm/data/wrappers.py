@@ -2,7 +2,6 @@ import random
 
 import torch
 from einops import rearrange
-import torchvision.transforms.v2.functional as F
 from torchvision.transforms.v2 import InterpolationMode, Normalize, Resize
 import random
 import math
@@ -17,6 +16,13 @@ from .utils import make_coord
 
 
 
+#TAKEN FROM: https://github.com/2y7c3/Super-Resolution-Neural-Operator/blob/main/datasets/wrappers.py
+def resize_fn(img, size):
+    return transforms.ToTensor()(
+        transforms.Resize(size, InterpolationMode.BILINEAR)(
+            transforms.ToPILImage()(img)))
+    
+
 class VariableResolutionAEDatasetWrapper:  
         def __init__(
             self,
@@ -24,6 +30,7 @@ class VariableResolutionAEDatasetWrapper:
             res_x: int,
             train: bool,
             max_rescale_factor: int,
+            min_rescale_factor: int = 1,
         ) -> None:
             super().__init__()
 
@@ -31,20 +38,22 @@ class VariableResolutionAEDatasetWrapper:
             self.res_x = res_x
             self.train = train
             self.max_rescale_factor = max_rescale_factor
+            self.min_rescale_factor = min_rescale_factor
             self.normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=False)
 
         def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, torch.Tensor] | torch.Tensor]:
             outputs = self.dataset[index]
             if self.train:
-                rescale_factor = random.choice(list(range(1, self.max_rescale_factor + 1)))
+                rescale_factor = random.uniform(self.min_rescale_factor, self.max_rescale_factor)
             else:
                 rescale_factor = self.max_rescale_factor
   
-            x = self.normalize(F.resize(outputs, self.res_x, interpolation=InterpolationMode.BILINEAR))
-            if outputs.size(-2) == self.res_x * rescale_factor:
+            x = self.normalize(resize_fn(outputs, self.res_x))
+            
+            if outputs.size(-2) == round(self.res_x * rescale_factor):
                 y = outputs
             else:
-                y = F.resize(outputs, self.res_x * rescale_factor, interpolation=InterpolationMode.BILINEAR)
+                y = resize_fn(outputs, round(self.res_x * rescale_factor))
             
             if self.train:
                 y = self.normalize(y)
@@ -113,14 +122,13 @@ class VariableResolutionNextFrameDatasetWrapper:
         self.res_x = res_x
         self.context_length = context_length
         
-        self.resize_x = Resize(res_x)
         self.normalize_x = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=False)
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         frames = self.dataset[index]
         x, y = frames[:self.context_length], frames[self.context_length:]
         
-        x = self.resize_x(x)
+        x = resize_fn(x, self.res_x)
         x = self.normalize_x(x)
         
         return x, y
@@ -148,51 +156,42 @@ class NextFrameDatasetWrapper:
         return len(self.dataset)
         
 
-#TAKEN FROM: https://github.com/2y7c3/Super-Resolution-Neural-Operator/blob/main/datasets/wrappers.py
-def resize_fn(img, size):
-    return transforms.ToTensor()(
-        transforms.Resize(size, InterpolationMode.BILINEAR)(
-            transforms.ToPILImage()(img)))
-
-#TAKEN FROM: https://github.com/2y7c3/Super-Resolution-Neural-Operator/blob/main/datasets/wrappers.py
+#ADAPTED FROM: https://github.com/2y7c3/Super-Resolution-Neural-Operator/blob/main/datasets/wrappers.py
 class SRImplicitDownsampledFast(Dataset):
 
-    def __init__(self, dataset, inp_size=None, scale_min=1, scale_max=None,
-                 augment=False):
+    def __init__(
+        self,
+        dataset,
+        inp_size: int = 32,
+        scale_min: int = 1,
+        scale_max: int = 4,
+        train: bool = False,
+    ):
         self.dataset = dataset
         self.inp_size = inp_size
         self.scale_min = scale_min
-        if scale_max is None:
-            scale_max = scale_min
         self.scale_max = scale_max
-        self.augment = augment
+        self.train = train
+        
+        self.normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
 
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         img = self.dataset[idx]
         s = random.uniform(self.scale_min, self.scale_max)
 
-        if self.inp_size is None:
-            h_lr = math.floor(img.shape[-2] / s + 1e-9)
-            w_lr = math.floor(img.shape[-1] / s + 1e-9)
-            h_hr = round(h_lr * s)
-            w_hr = round(w_lr * s)
-            img = img[:, :h_hr, :w_hr]
-            img_down = resize_fn(img, (h_lr, w_lr))
-            crop_lr, crop_hr = img_down, img
-        else:
-            h_lr = self.inp_size
-            w_lr = self.inp_size
-            h_hr = round(h_lr * s)
-            w_hr = round(w_lr * s)
-            x0 = random.randint(0, img.shape[-2] - w_hr)
-            y0 = random.randint(0, img.shape[-1] - w_hr)
-            crop_hr = img[:, x0: x0 + w_hr, y0: y0 + w_hr]
-            crop_lr = resize_fn(crop_hr, w_lr)
+        h_lr, w_lr = self.inp_size, self.inp_size
+        h_hr, w_hr = round(h_lr * s), round(w_lr * s)
 
-        if self.augment:
+        img_hr = resize_fn(img, (h_hr, w_hr))
+        img_lr = resize_fn(img, (h_lr, w_lr))
+        
+        self.normalize(img_hr)
+        self.normalize(img_lr)
+
+        if self.train:
             hflip = random.random() < 0.5
             vflip = random.random() < 0.5
             dflip = random.random() < 0.5
@@ -206,28 +205,28 @@ class SRImplicitDownsampledFast(Dataset):
                     x = x.transpose(-2, -1)
                 return x
 
-            crop_lr = augment(crop_lr)
-            crop_hr = augment(crop_hr)
+            img_lr = augment(img_lr)
+            img_hr = augment(img_hr)
 
         hr_coord = make_coord([h_hr, w_hr], flatten=False)
-        hr_rgb = crop_hr
+        hr_rgb = img_hr
 
-        if self.inp_size is not None:
+        if self.train:
             
-            idx = torch.tensor(np.random.choice(h_hr*w_hr, h_lr*w_lr, replace=False))
-            #idx,_ = torch.sort(idx)
+            idcs = torch.tensor(np.random.choice(h_hr*w_hr, h_lr*w_lr, replace=False))
+
             hr_coord = hr_coord.view(-1, hr_coord.shape[-1])
-            hr_coord = hr_coord[idx, :]
+            hr_coord = hr_coord[idcs, :]
             hr_coord = hr_coord.view(h_lr, w_lr, hr_coord.shape[-1])
 
-            hr_rgb = crop_hr.contiguous().view(crop_hr.shape[0], -1)
-            hr_rgb = hr_rgb[:, idx]
-            hr_rgb = hr_rgb.view(crop_hr.shape[0], h_lr, w_lr)
+            hr_rgb = img_hr.contiguous().view(img_hr.shape[0], -1)
+            hr_rgb = hr_rgb[:, idcs]
+            hr_rgb = hr_rgb.view(img_hr.shape[0], h_lr, w_lr)
         
-        cell = torch.tensor([2 / crop_hr.shape[-2], 2 / crop_hr.shape[-1]], dtype=torch.float32)
+        cell = torch.tensor([2 / img_hr.shape[-2], 2 / img_hr.shape[-1]], dtype=torch.float32)
         
         return {
-            'inp': crop_lr,
+            'inp': img_lr,
             'coord': hr_coord,
             'cell': cell,
             'gt': hr_rgb

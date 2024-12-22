@@ -85,7 +85,7 @@ class VideoFrameDataset(torch.utils.data.Dataset):
             data_path: str,
             video_length: int,
             image_size: tuple[int, int] = (32, 32),
-            transform_name="resize",
+            transform_name: str | None = None,
         ):
         """
         Args:
@@ -96,7 +96,7 @@ class VideoFrameDataset(torch.utils.data.Dataset):
         self.video_length = video_length
         self.paths = read_file(data_path)
         self.image_size = image_size
-        self.transforms = get_transforms_image(transform_name, image_size)
+        self.transforms = get_transforms_image(transform_name, image_size) if transform_name else None
         self.frame_indices = self._get_all_frame_indices()
 
     def _get_all_frame_indices(self):
