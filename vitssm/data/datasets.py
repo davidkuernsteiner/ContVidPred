@@ -94,14 +94,14 @@ class VideoFrameDataset(torch.utils.data.Dataset):
         """
         self.data_path = data_path
         self.video_length = video_length
-        self.paths = read_file(data_path)
+        self.data = read_file(data_path)
         self.image_size = image_size
         self.transforms = get_transforms_image(transform_name, image_size) if transform_name else None
         self.frame_indices = self._get_all_frame_indices()
 
     def _get_all_frame_indices(self):
         frame_indices = []
-        for video_path in self.paths["path"]:
+        for video_path in self.data["path"]:
             frame_indices.extend([(video_path, i) for i in range(self.video_length)])
         return frame_indices
 
