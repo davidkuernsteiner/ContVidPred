@@ -128,6 +128,7 @@ def get_dataset(config: DictConfig) -> Any:
                 ),
                 res_x=config.get("resolution_x", 32),
                 context_length=config.get("context_length", 1),
+                rescale_factor=config.get("max_rescale_factor", 1),
             )
                 
         case "vmdsprites-srno":
@@ -233,13 +234,8 @@ def get_dataloaders_next_frame(
 
 def get_dataloaders_continuous_ae(
     config: DictConfig,
-) -> tuple[DataLoader, DataLoader]:
+) -> tuple[DataLoader, tuple[DataLoader]]:
     train_set = get_dataset(config)
-    
-    eval_config = config.copy()
-    eval_config["mode"] = "test"
-    eval_config["frame_interval"] = eval_config["clip_length"]
-    eval_set = get_dataset(eval_config)
     
     train_loader = DataLoader(
         train_set,
@@ -254,64 +250,78 @@ def get_dataloaders_continuous_ae(
         persistent_workers=config.get("persistent_workers", False),
     )
     
-    eval_loader = DataLoader(
-        eval_set,
-        batch_sampler=PartitionBatchSampler(
+    eval_config = config.copy()
+    eval_config["mode"] = "test"
+    eval_config["frame_interval"] = eval_config["clip_length"]
+    
+    eval_loaders = []
+    for i in range(1, config.get("max_rescale_factor", 4) + 1):
+        eval_config["max_rescale_factor"] = i
+        eval_set = get_dataset(eval_config)
+        
+        eval_loader = DataLoader(
             eval_set,
-            batch_size=config.get("val_batch_size", config.batch_size),
-            num_partitions=len(eval_set.dataset.data) // 100,
-            shuffle=False,
+            batch_sampler=PartitionBatchSampler(
+                eval_set,
+                batch_size=config.get("val_batch_size", config.batch_size),
+                num_partitions=len(eval_set.dataset.data) // 100,
+                shuffle=False,
+            ),
+            num_workers=config.get("num_workers", 1),
+            pin_memory=config.get("pin_memory", False),
+            persistent_workers=config.get("persistent_workers", False),
+        )
+        eval_loaders.append(eval_loader)
+    
+    return train_loader, tuple(eval_loaders)
+
+
+def get_dataloaders_continuous_next_frame(
+    config: DictConfig,
+) -> tuple[DataLoader, tuple[DataLoader]]:
+    eval_config = config.copy()
+    config["resolution"] = config["resolution_x"]
+    
+    train_set = get_dataset(config)
+    
+    train_loader = DataLoader(
+        train_set,
+        batch_sampler=PartitionBatchSampler(
+            train_set,
+            batch_size=config.get("batch_size", 64),
+            num_partitions=len(train_set.dataset.data) // 100,
+            shuffle=True,
         ),
         num_workers=config.get("num_workers", 1),
         pin_memory=config.get("pin_memory", False),
         persistent_workers=config.get("persistent_workers", False),
     )
     
-    return train_loader, eval_loader
-
-
-def get_dataloaders_continuous_next_frame(
-    config: DictConfig,
-) -> tuple[DataLoader, DataLoader]:
-    
-    eval_config = config.copy()
-    
-    config["resolution"] = config["resolution_x"]
     eval_config["clip_length"] = eval_config.get("rollout_length", 10) + eval_config.get("context_length", 1)
     eval_config["frame_interval"] = eval_config["clip_length"]
     eval_config["mode"] = "test"
     eval_config["name"] = "vmdsprites-var-res-nextframe"
     
-    train_set = get_dataset(config)
-    eval_set = get_dataset(eval_config)
-    
-    train_loader = DataLoader(
-        train_set,
-        batch_sampler=PartitionBatchSampler(
-            train_set,
-            batch_size=config.get("batch_size", 64),
-            num_partitions=len(train_set.dataset.data) // 100,
-            shuffle=True,
-        ),
-        num_workers=config.get("num_workers", 1),
-        pin_memory=config.get("pin_memory", False),
-        persistent_workers=config.get("persistent_workers", False),
-    )
-    
-    eval_loader = DataLoader(
-        eval_set,
-        batch_sampler=PartitionBatchSampler(
+    eval_loaders = []
+    for i in range(1, config.get("max_rescale_factor", 4) + 1):
+        eval_config["max_rescale_factor"] = i
+        eval_set = get_dataset(eval_config)
+        
+        eval_loader = DataLoader(
             eval_set,
-            batch_size=config.get("val_batch_size", config.batch_size),
-            num_partitions=len(eval_set.dataset.data) // 100,
-            shuffle=False,
-        ),
-        num_workers=config.get("num_workers", 1),
-        pin_memory=config.get("pin_memory", False),
-        persistent_workers=config.get("persistent_workers", False),
-    )
+            batch_sampler=PartitionBatchSampler(
+                eval_set,
+                batch_size=config.get("val_batch_size", config.batch_size),
+                num_partitions=len(eval_set.dataset.data) // 100,
+                shuffle=False,
+            ),
+            num_workers=config.get("num_workers", 1),
+            pin_memory=config.get("pin_memory", False),
+            persistent_workers=config.get("persistent_workers", False),
+        )
+        eval_loaders.append(eval_loader)
     
-    return train_loader, eval_loader
+    return train_loader, tuple(eval_loaders)
     
     
 def get_dataloaders_srno(
@@ -336,7 +346,7 @@ def get_dataloaders_srno(
     eval_config["mode"] = "test"
     
     eval_loaders = []
-    for i in range(1, 5):
+    for i in range(1, config.get("max_rescale_factor", 4) + 1):
         eval_config["min_rescale_factor"] = i
         eval_config["max_rescale_factor"] = i
         eval_set = get_dataset(eval_config)

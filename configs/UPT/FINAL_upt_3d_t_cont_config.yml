@@ -1,10 +1,10 @@
 project: 'ContVidPred'
 group: 'UPT'
-name: 'vmdsprites-0-UPT_3D_T-cont'
-id: 'vmdsprites-0-UPT_3D_T-cont_20241222_2'
+name: 'vmdsprites-0-UPT_3D_T-cont-scale'
+id: 'vmdsprites-0-UPT_3D_T-cont-scale_20241224_0'
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 100
-eval_freq: 1
+eval_freq: 2
 checkpoint_freq: 1000
 seed: 0
 resume: False
@@ -63,6 +63,6 @@ model:
   upt_autoencoder_type: 'UPTVAE_T'
   upt_autoencoder_kwargs: {resolution: [4, 32, 32],
                            ln_regularization: True}
-  upt_autoencoder_checkpoint_path: '/content/drive/MyDrive/data/checkpoints/ContVidPred/UPT/vmdsprites-0-UPT_VAE_T-cont.pth'
+  upt_autoencoder_checkpoint_path: '/content/drive/MyDrive/data/checkpoints/ContVidPred/UPT/vmdsprites-0-UPT_VAE_T-cont-scale.pth'
   upt_approximator_type: 'UPTA_T'
   upt_approximator_kwargs: {ln_regularization: True}

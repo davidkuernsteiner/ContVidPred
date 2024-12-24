@@ -1,10 +1,10 @@
 project: 'ContVidPred'
 group: 'UPT'
-name: 'vmdsprites-0-UPT_VAE_T-cont_scale'
-id: 'vmdsprites-0-UPT_VAE_T-cont_20241222_0'
+name: 'vmdsprites-0-UPT_VAE_T-cont-scale'
+id: 'vmdsprites-0-UPT_VAE_T-cont-scale_20241224_0'
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 100
-eval_freq: 1
+eval_freq: 2
 checkpoint_freq: 1000
 seed: 0
 resume: False

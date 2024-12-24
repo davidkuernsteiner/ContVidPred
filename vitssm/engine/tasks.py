@@ -265,22 +265,18 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
             run_object.dataset.max_rescale_factor
         ) if self.metrics is not None else None
     
-    def _train_step(self, _x: Tensor, _y: dict[str, Tensor]) -> dict[str, float]:
+    def _train_step(self, batch: dict[str, Tensor]) -> dict[str, float]:
         self.model.decoder.unbatch_mode = "none"
         self.optimizer.zero_grad()
         
-        coords, values = _y["coords"], _y["values"]
-        _x, coords, values = (
-            _x.to(self.device, non_blocking=False), 
-            coords.to(self.device, non_blocking=False), 
-            values.to(self.device, non_blocking=False)
-        )
-        
-        b, t, c, h, w = _x.shape
+        for k, v in batch.items():
+            batch[k] = v.to(self.device, non_blocking=False)
+            
+        x, coords, y_values = batch.values()
         
         with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-            _pred = self.model(_x, output_pos=coords)
-            _loss = self.criterion(_pred, values)
+            _pred = self.model(x, output_pos=coords)
+            _loss = self.criterion(_pred, y_values)
             
         self.scaler.scale(_loss).backward()
         self.scaler.step(self.optimizer)
@@ -292,32 +288,19 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
         return {"loss": _loss.item()}
     
     @torch.no_grad()
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
+    def _eval_step(self, *batches: dict[str, Tensor]) -> dict[str, float]:
         self.model.decoder.unbatch_mode = "video"
-        _x, _y = _x.to(self.device, non_blocking=False), _y.to(self.device, non_blocking=False)
-        b, x_t, c, x_h, x_w = _x.shape
-        b, y_t, c, y_h, y_w = _y.shape
         
-        for rescale_factor in range(1, y_h // x_h + 1):
-            if x_h * rescale_factor == y_h:
-                y = _y.clone()
-            else:
-                y = F.resize(_y.clone(), (x_h * rescale_factor, x_w * rescale_factor), interpolation=F.InterpolationMode.BILINEAR)
+        for rescale_factor, batch in enumerate(batches, start=1):
+            for k, v in batch.items():
+                batch[k] = v.to(self.device, non_blocking=False)
             
-            F.normalize(y, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
+            x, coords, y = batch.values()
             
-            b, t, c, h, w = y.shape
-            
-            output_pos = rearrange(
-                torch.stack(torch.meshgrid([torch.arange(t), torch.arange(h), torch.arange(w)], indexing="ij")),
-                "ndim time height width -> (time height width) ndim",
-            ).float().to(self.device, non_blocking=False)
-
-            dims = torch.tensor([t, h, w]).to(self.device, non_blocking=False)
-            output_pos = output_pos / (dims - 1) * 1000
+            b, _, _, _, _ = y.shape
 
             with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-                _pred = self.eval_model(_x, output_pos=repeat(output_pos, "... -> b ...", b=b))
+                _pred = self.eval_model(x, output_pos=repeat(coords, "... -> b ...", b=b))
         
             if self.metrics is not None:
                 self.metrics.update(_pred, y, rescale_factor)
@@ -395,22 +378,16 @@ class ContinuousNextFrameUPTEngine(ModelEngine):
         return {"loss": loss.item()}
     
     @torch.no_grad()
-    def _eval_step(self, _x: Tensor, _y: Tensor) -> dict[str, float]:
-        _x, _y = _x.to(self.device, non_blocking=False), _y.to(self.device, non_blocking=False)
-        b, x_t, c, x_h, x_w = _x.shape
-        b, y_t, c, y_h, y_w = _y.shape
-
-        for rescale_factor in range(1, y_h // x_h + 1):
-            if x_h * rescale_factor == y_h:
-                y = _y.clone()
-            else:
-                y = F.resize(_y.clone(), (x_h * rescale_factor, x_w * rescale_factor), interpolation=F.InterpolationMode.BILINEAR)
+    def _eval_step(self, *batches: dict[str, Tensor]) -> dict[str, float]:
+        for rescale_factor, batch in enumerate(batches, start=1):
+            for k, v in batch.items():
+                batch[k] = v.to(self.device, non_blocking=False)
             
-            F.normalize(y, mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
+            x, y = batch.values()
 
             with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
                 frames = self.eval_model.rollout_frames(
-                    _x,
+                    x,
                     y.shape[1],
                     spatial_scale=rescale_factor,
                 )

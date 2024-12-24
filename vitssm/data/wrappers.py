@@ -39,52 +39,54 @@ class VariableResolutionAEDatasetWrapper:
             self.train = train
             self.max_rescale_factor = max_rescale_factor
             self.min_rescale_factor = min_rescale_factor
-            self.normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=False)
+            self.normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
 
-        def __getitem__(self, index: int) -> tuple[torch.Tensor, dict[str, torch.Tensor] | torch.Tensor]:
+        def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
             outputs = self.dataset[index]
             if self.train:
                 rescale_factor = random.uniform(self.min_rescale_factor, self.max_rescale_factor)
             else:
                 rescale_factor = self.max_rescale_factor
   
-            x = self.normalize(resize_fn(outputs, self.res_x))
+            x = resize_fn(outputs, self.res_x)
             
             if outputs.size(-2) == round(self.res_x * rescale_factor):
                 y = outputs
             else:
                 y = resize_fn(outputs, round(self.res_x * rescale_factor))
+                
+            self.normalize(x)
+            self.normalize(y)
             
             if self.train:
-                y = self.normalize(y)
-                x_cl, _, x_ht, x_wt = x.shape
-                y_cl, _, y_ht, y_wt = y.shape
+                x_t, _, x_h, x_w = x.shape
+                y_t, _, y_h, y_w = y.shape
                 coords = rearrange(
-                    torch.stack(
-                        torch.meshgrid(
-                            [
-                                torch.arange(int(y_cl)),
-                                torch.arange(int(y_ht)),
-                                torch.arange(int(y_wt))
-                            ], 
-                            indexing="ij",
-                        )
-                    ),
+                    torch.stack(torch.meshgrid([torch.arange(y_t), torch.arange(y_h), torch.arange(y_w)], indexing="ij")),
                     "ndim time height width -> (time height width) ndim",
                 ).float()
-                dims = torch.tensor([int(y_cl), int(y_ht), int(y_wt)])
+                dims = torch.tensor([y_t, y_h, y_w])
                 coords = coords / (dims - 1) * 1000
 
                 y_values = rearrange(y, "cl ch ht wt -> (cl ht wt) ch")
 
-                subsample_idcs = torch.randperm(coords.size(0))[:x_cl*x_ht*x_wt]
+                subsample_idcs = torch.randperm(coords.size(0))[:x_t*x_h*x_w]
                 coords = coords[subsample_idcs]
                 y_values = y_values[subsample_idcs]
 
-                return x, {"coords": coords, "values": y_values}
+                return {"x": x, "coords": coords, "y_values": y_values}
             
             else:
-                return x, y
+                y_t, _, y_h, y_w = y.shape
+                coords = rearrange(
+                    torch.stack(torch.meshgrid([torch.arange(y_t), torch.arange(y_h), torch.arange(y_w)], indexing="ij")),
+                    "ndim time height width -> (time height width) ndim",
+                ).float()
+
+                dims = torch.tensor([y_t, y_h, y_w])
+                coords = coords / (dims - 1) * 1000
+            
+                return {"x": x, "coords": coords, "y": y}
 
         def __len__(self) -> int:
             return len(self.dataset)
@@ -115,23 +117,29 @@ class VariableResolutionNextFrameDatasetWrapper:
         dataset: torch.utils.data.Dataset,
         res_x: int,
         context_length: int = 1,
+        rescale_factor: float = 1,
     ) -> None:
         super().__init__()
 
         self.dataset = dataset
         self.res_x = res_x
         self.context_length = context_length
+        self.rescale_factor = rescale_factor
         
-        self.normalize_x = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=False)
+        self.normalize = Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
         frames = self.dataset[index]
         x, y = frames[:self.context_length], frames[self.context_length:]
         
         x = resize_fn(x, self.res_x)
-        x = self.normalize_x(x)
+        if y.size(-2) != round(self.res_x * self.rescale_factor):
+            y = resize_fn(y, round(self.res_x * self.rescale_factor))
+                
+        self.normalize(x)
+        self.normalize(y)
         
-        return x, y
+        return {"x": x, "y": y}
 
     def __len__(self) -> int:
         return len(self.dataset)
