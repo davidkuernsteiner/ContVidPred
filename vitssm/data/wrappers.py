@@ -3,6 +3,7 @@ import random
 import torch
 from einops import rearrange
 from torchvision.transforms.v2 import InterpolationMode, Normalize, Resize
+import torchvision.transforms.v2.functional as F
 import random
 import math
 from torchvision.transforms import InterpolationMode
@@ -47,13 +48,16 @@ class VariableResolutionAEDatasetWrapper:
                 rescale_factor = random.uniform(self.min_rescale_factor, self.max_rescale_factor)
             else:
                 rescale_factor = self.max_rescale_factor
+                
+            h_lr, w_lr = self.res_x, self.res_x
+            h_hr, w_hr = round(h_lr * rescale_factor), round(w_lr * rescale_factor)
   
-            x = resize_fn(outputs, self.res_x)
+            x = F.resize(outputs, [h_lr, w_lr])
             
-            if outputs.size(-2) == round(self.res_x * rescale_factor):
+            if outputs.size(-2) == h_hr:
                 y = outputs
             else:
-                y = resize_fn(outputs, round(self.res_x * rescale_factor))
+                y = F.resize(outputs, [h_hr, w_hr])
                 
             self.normalize(x)
             self.normalize(y)
@@ -132,9 +136,12 @@ class VariableResolutionNextFrameDatasetWrapper:
         frames = self.dataset[index]
         x, y = frames[:self.context_length], frames[self.context_length:]
         
-        x = resize_fn(x, self.res_x)
-        if y.size(-2) != round(self.res_x * self.rescale_factor):
-            y = resize_fn(y, round(self.res_x * self.rescale_factor))
+        h_lr, w_lr = self.res_x, self.res_x
+        h_hr, w_hr = round(h_lr * self.rescale_factor), round(w_lr * self.rescale_factor)
+        
+        x = F.resize(x, [h_lr, w_lr])
+        if y.size(-2) != h_hr:
+            y = F.resize(y, [h_hr, w_hr])
                 
         self.normalize(x)
         self.normalize(y)
