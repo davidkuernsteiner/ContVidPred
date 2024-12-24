@@ -1,7 +1,7 @@
 project: 'ContVidPred'
 group: 'UPT'
 name: 'vmdsprites-0-UPT_3D_T-cont-scale'
-id: 'vmdsprites-0-UPT_3D_T-cont-scale_20241224_0'
+id: 'vmdsprites-0-UPT_3D_T-cont-scale_20241224_1'
 tags: ['upt', 'vmdsprites', 'tiny']
 log_freq: 100
 eval_freq: 2

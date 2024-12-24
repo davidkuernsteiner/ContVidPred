@@ -7,7 +7,7 @@ log_freq: 100
 eval_freq: 2
 checkpoint_freq: 1000
 seed: 0
-resume: False
+resume: True
 
 dataset:
   name: 'vmdsprites-var-res-ae'

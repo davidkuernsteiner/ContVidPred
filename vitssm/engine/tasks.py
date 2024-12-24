@@ -296,11 +296,9 @@ class ContinuousVideoAutoEncoderUPTEngine(ModelEngine):
                 batch[k] = v.to(self.device, non_blocking=False)
             
             x, coords, y = batch.values()
-            
-            b, _, _, _, _ = y.shape
 
             with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16, enabled=self.use_amp):
-                _pred = self.eval_model(x, output_pos=repeat(coords, "... -> b ...", b=b))
+                _pred = self.eval_model(x, output_pos=coords)
         
             if self.metrics is not None:
                 self.metrics.update(_pred, y, rescale_factor)
