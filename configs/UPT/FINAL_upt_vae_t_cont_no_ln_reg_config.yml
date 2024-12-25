@@ -1,0 +1,70 @@
+project: 'ContVidPred'
+group: 'UPT'
+name: 'vmdsprites-0-UPT_VAE_T-cont-scale-no-ln-reg'
+id: 'vmdsprites-0-UPT_VAE_T-cont-scale-no-ln-reg_20241225_0'
+tags: ['upt', 'vmdsprites', 'tiny']
+log_freq: 100
+eval_freq: 2
+checkpoint_freq: 1000
+seed: 0
+resume: False
+
+dataset:
+  name: 'vmdsprites-var-res-ae'
+  mode: 'train'
+  fold: '0'
+  output_format: 'TCHW'
+  video_length: 108
+  clip_length: 4
+  frame_interval: 1
+  resolution: 128
+  resolution_x: 32
+  max_rescale_factor: 4
+  train_percentage: 1.0
+  num_workers: 2
+  persistent_workers: False
+  pin_memory: False
+  batch_size: 64
+  val_batch_size: 16
+
+optimization:
+  loss:
+    name: 'MSELoss'
+    kwargs: {}
+  optimizer:
+    name: 'AdamW'
+    kwargs: {lr: 0.001,
+             weight_decay: 0.01}
+  scheduler:
+    name: 'warm_cos_decay_scheduler'
+    kwargs: {warmup_steps: 0,
+             decay_steps: 200000,
+             gamma: 0.0}
+    step_on_batch: True
+  steps: 200000
+
+metrics:
+  SSIM:
+    name: 'StructuralSimilarityIndexMeasure'
+    kwargs: {}
+  PSNR:
+    name: 'PeakSignalNoiseRatio'
+    kwargs: {}
+
+model:
+  name: 'upt_vae'
+  device: 'cuda'
+  use_amp: False
+  use_ema: False
+  ema_steps: 1
+
+  input_dim: 3
+  patch_size: [2, 2, 2]
+  resolution: [4, 32, 32]
+  latent_dim: 96
+  num_heads: 4
+  depth: 8
+  perc_dim: 96
+  perc_num_heads: 4
+  num_latent_tokens: 32
+  ln_regularization: False

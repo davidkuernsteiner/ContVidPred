@@ -1,0 +1,68 @@
+project: 'ContVidPred'
+group: 'UPT'
+name: 'vmdsprites-0-UPT_3D_T-cont-scale-no-ln-reg'
+id: 'vmdsprites-0-UPT_3D_T-cont-scale-no-ln-reg_20241225_0'
+tags: ['upt', 'vmdsprites', 'tiny']
+log_freq: 100
+eval_freq: 2
+checkpoint_freq: 1000
+seed: 0
+resume: False
+
+dataset:
+  name: 'vmdsprites-nextframe'
+  mode: 'train'
+  fold: '0'
+  output_format: 'TCHW'
+  video_length: 108
+  clip_length: 8
+  frame_interval: 1
+  context_length: 4
+  rollout_length: 32
+  resolution: 128
+  resolution_x: 32
+  max_rescale_factor: 4
+  train_percentage: 1.0
+  num_workers: 2
+  persistent_workers: False
+  pin_memory: False
+  batch_size: 64
+  val_batch_size: 32
+
+optimization:
+  loss:
+    name: 'L1Loss'
+    kwargs: {}
+  optimizer:
+    name: 'AdamW'
+    kwargs: {lr: 0.001,
+             weight_decay: 0.01}
+  scheduler:
+    name: 'warm_cos_decay_scheduler'
+    kwargs: {warmup_steps: 0,
+             decay_steps: 200000,
+             gamma: 0.0}
+    step_on_batch: True
+  steps: 200000
+
+metrics:
+  SSIM:
+    name: 'StructuralSimilarityIndexMeasure'
+    kwargs: {}
+  PSNR:
+    name: 'PeakSignalNoiseRatio'
+    kwargs: {}
+
+model:
+  name: 'upt_3d_next_frame'
+  device: 'cuda'
+  use_amp: False
+  use_ema: False
+  ema_steps: 1
+
+  upt_autoencoder_type: 'UPTVAE_T'
+  upt_autoencoder_kwargs: {resolution: [4, 32, 32],
+                           ln_regularization: False}
+  upt_autoencoder_checkpoint_path: '/content/drive/MyDrive/data/checkpoints/ContVidPred/UPT/vmdsprites-0-UPT_VAE_T-cont-scale-no-ln-reg.pth'
+  upt_approximator_type: 'UPTA_T'
+  upt_approximator_kwargs: {ln_regularization: False}
