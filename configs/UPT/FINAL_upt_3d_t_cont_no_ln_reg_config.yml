@@ -61,8 +61,7 @@ model:
   ema_steps: 1
 
   upt_autoencoder_type: 'UPTVAE_T'
-  upt_autoencoder_kwargs: {resolution: [4, 32, 32],
-                           ln_regularization: False}
+  upt_autoencoder_kwargs: {resolution: [4, 32, 32], ln_regularization: False}
   upt_autoencoder_checkpoint_path: '/content/drive/MyDrive/data/checkpoints/ContVidPred/UPT/vmdsprites-0-UPT_VAE_T-cont-scale-no-ln-reg.pth'
   upt_approximator_type: 'UPTA_T'
   upt_approximator_kwargs: {ln_regularization: False}

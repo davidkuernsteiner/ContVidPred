@@ -276,9 +276,10 @@ class DecoderPerceiver(nn.Module):
         self.cond_dim = cond_dim
         self.init_weights = init_weights
         self.unbatch_mode = unbatch_mode
+        self.ln_regularization = ln_regularization
 
         # input affine transformation
-        self.input_affine = AffineTransformation(input_dim) if ln_regularization else nn.Identity()
+        self.input_affine = AffineTransformation(input_dim) if self.ln_regularization else nn.Identity()
 
         # blocks
         if cond_dim is None:
@@ -559,6 +560,7 @@ def UPTVAE_M(**kwargs):
         perc_dim=96,
         perc_num_heads=2,
         num_latent_tokens=32,
+        **kwargs,
     )
 
 def UPTVAE_T(**kwargs):
@@ -571,6 +573,7 @@ def UPTVAE_T(**kwargs):
         perc_dim=96,
         perc_num_heads=4,
         num_latent_tokens=32,
+        **kwargs,
     )
     
 upt_autoencoder_models = {
