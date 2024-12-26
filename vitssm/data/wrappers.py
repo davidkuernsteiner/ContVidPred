@@ -52,10 +52,13 @@ class VariableResolutionAEDatasetWrapper:
             h_lr, w_lr = self.res_x, self.res_x
             h_hr, w_hr = round(h_lr * rescale_factor), round(w_lr * rescale_factor)
   
-            x = F.resize(outputs, [h_lr, w_lr])
+            if outputs.size(-2) == h_lr:
+                x = outputs.clone()
+            else:
+                x = F.resize(outputs, [h_lr, w_lr])
             
             if outputs.size(-2) == h_hr:
-                y = outputs
+                y = outputs.clone()
             else:
                 y = F.resize(outputs, [h_hr, w_hr])
                 
@@ -139,7 +142,8 @@ class VariableResolutionNextFrameDatasetWrapper:
         h_lr, w_lr = self.res_x, self.res_x
         h_hr, w_hr = round(h_lr * self.rescale_factor), round(w_lr * self.rescale_factor)
         
-        x = F.resize(x, [h_lr, w_lr])
+        if x.size(-2) != h_lr:
+            x = F.resize(x, [h_lr, w_lr])
         if y.size(-2) != h_hr:
             y = F.resize(y, [h_hr, w_hr])
                 
