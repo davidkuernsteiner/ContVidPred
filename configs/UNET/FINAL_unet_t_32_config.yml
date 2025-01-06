@@ -71,7 +71,7 @@ model:
     out_channels: 3,
   }
   diffusion_steps: 1000
-  timestep_respacing: "trailing25"
+  timestep_respacing: "trailing4"
   predict_target: "velocity"
   rescale_betas_zero_snr: True
   use_noise_augmentation: False
