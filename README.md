@@ -9,6 +9,7 @@ This repository contains all the code associated with my master's thesis, **"Tow
 - **`scripts/`**: Python scripts for dataset generation and training models.
 - **`configs/`**: Configuration files used for training and experiments.
   - Configs with the `FINAL` prefix were used for the final experiments.
+- **`vitssm/`**: Source code
 
 ---
 
@@ -47,8 +48,3 @@ python scripts/train_upt_vae_cont.py --config UPT/FINAL_upt_vae_t_cont_config.ym
 
 ## 📝 Notes
 - All experiments and results presented in the thesis used configurations prefixed with `FINAL`.
-
----
-
-## 📫 Contact
-For any questions or discussions, feel free to reach out!
