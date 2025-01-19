@@ -4,20 +4,14 @@ env:
     CONDA: micromamba
 
 vars:
-    PROJECT: ViTSSM
+    PROJECT: ContVidPred
     LIBRARY: vitssm
-    REPOSITORY: https://github.com/davidkuernsteiner/ViTSSM.git
+    REPOSITORY: https://github.com/davidkuernsteiner/ContVidPred.git
     DATA_DIR: data_store
     CHECKPOINT_DIR: checkpoints
     SCRIPTS_DIR: scripts
-    WANDB_ENTITY: davidkuernsteiner
-    WANDB_QUEUE: ML
 
 tasks:
-    print-os:
-        cmds:
-            - echo {{OS}}
-
     env-create:
         cmds:
             - $CONDA env create --file env.yml --yes
@@ -26,29 +20,3 @@ tasks:
 
     env-remove:
         cmd: $CONDA env remove -n {{.LIBRARY}} --yes
-
-    format:
-        cmds:
-            - for: { var: LIBRARY }
-              cmd: ruff check {{.ITEM}} --fix && black --config pyproject.toml {{.ITEM}}
-
-    lint:
-        cmds:
-            - for: { var: LIBRARY }
-              cmd: ruff check {{.ITEM}} && black --diff --check --config pyproject.toml {{.ITEM}}
-
-    typing:
-        cmd: pyright vitssm
-
-    check:
-        cmds:
-            - task: lint
-            - task: typing
-
-    queue-up:
-        cmds:
-            - wandb launch-agent -e {{.WANDB_ENTITY}} -q {{.WANDB_QUEUE}}
-            
-    run-train-job:
-        cmds:
-            - wandb launch --uri "{{.REPOSITORY}}" --dockerfile Dockerfile.wandb --project "{{.PROJECT}}" --job-name "train-job" --entry-point "python {{.SCRIPTS_DIR}}/execute_train_job.py"
